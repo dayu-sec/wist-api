@@ -3,6 +3,20 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.1.2] - 2026-10-05
+
+### 变更
+
+- **`enrollment` 按版本分模块，为 API v1/v2 并存做结构准备**：报文移入 `enrollment::v1`，
+  `enrollment::EnrollmentRequest` 等经 `pub use v1::*` **路径不变**（无破坏）。新增
+  `enrollment::CURRENT`（= v1 的线上版本号）与 `enrollment::v1::API_VERSION`。
+  约定见 `wist-design/.../api-seam-inventory.md` §7。
+
+### 内部
+
+- 补守卫测试：钉住 `EnrollmentRequest` / `EnrollmentOutcome` 的线上字段集、`CURRENT` 与报文
+  `api_version` 一致、re-export 的领域类型确为 `wist-contracts` 的那几个（编译期身份断言）。
+
 ## [0.1.1] - 2026-10-05
 
 ### 变更
