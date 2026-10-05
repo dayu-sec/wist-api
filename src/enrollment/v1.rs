@@ -1,17 +1,13 @@
-//! `agent/enroll` 与 `agent/credentials:renew` 两条 edge seam 的报文定义。
+//! `agent/enroll` 与 `agent/credentials:renew` —— **v1** 基线。
 //!
-//! 这是**跨进程 seam 报文**的唯一一份定义：网关（接收端）与 agentd（发送端）都 `use` 这里，
-//! 不再各自复制。报文引用的**领域类型**（`HostProfile` / `AgentIdentity` / `CredentialBundle`
-//! / `InitialConfig` / `PolicyBinding`）是两侧共同底座，仍留在 `wist-contracts`；这里 re-export，
-//! 调用方可以从 `wist_api::enrollment` 一处取齐整条 seam。
+//! 这是这两条 seam 的**冻结基线**：只做**加性**兼容不动它；一旦需要非加性变更，
+//! 就新开 `v2`（另一组 `{route, req, resp}`），本模块**只增不删**（长期要给旧 agent 用）。
+//! 约定见 `wist-design/doc/design/foundation/api-seam-inventory.md` §7。
 
 use serde::{Deserialize, Serialize};
 
+use super::{AgentIdentity, CredentialBundle, HostProfile, InitialConfig, PolicyBinding};
 use wist_contracts::API_VERSION_V1;
-
-pub use wist_contracts::enrollment::{
-    AgentIdentity, AgentIdentityStatus, CredentialBundle, HostProfile, InitialConfig, PolicyBinding,
-};
 
 pub const SUBMIT_ENROLLMENT_REQUEST_KIND: &str = "submit_enrollment_request";
 pub const RENEW_AGENT_CREDENTIAL_KIND: &str = "renew_agent_credential";
