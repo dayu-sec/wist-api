@@ -3,6 +3,28 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.5.1] - 2026-10-06
+
+审查后的收口与测试补齐。**非破坏**（公共路径不变）。
+
+### 修复
+
+- **去掉 `AgentStatusAck` 的第二份定义**：它原先在 `agent_status` 与 `gateway` **各定义一份**——
+  同 crate 里两份同名报文正是本 crate 要消灭的漂移（wire 相同，任一侧改字段就变成「同名不同形」）。
+  现在 `agent_status` 是唯一定义，`wist_api::gateway::AgentStatusAck` 改为 **re-export**（旧路径仍能用）。
+
+### 新增
+
+- **seam 契约集成测试**（`tests/wire_contract.rs`）：钉住 11 个 envelope `kind`、5 个模块的 `CURRENT`/`API_VERSION`、
+  各报文的**线上字段集**与 **`deny_unknown_fields` 兼容策略**，并为每条 seam 备了**黄金样例 JSON**
+  （发送端/接收端 parse 同一份，即 `api-seam-inventory.md` §6.5 的落点）；另含枚举线上名/未知变体拒收。
+- 4 个模块（`agent_status` / `agent_uplink` / `gateway` / `work`）补齐与 `enrollment` 同款的
+  **模块级守护测试**：`CURRENT == "v1"` + re-export 领域类型的**编译期身份断言**。
+
+### 文档
+
+- README 模块表补全（原先只列了 `enrollment`）；修正 `agent_uplink` 里指向已迁出报文的陈旧引用。
+
 ## [0.5.0] - 2026-10-05
 
 ### 变更

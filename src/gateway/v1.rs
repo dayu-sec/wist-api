@@ -274,13 +274,11 @@ pub struct ActionResultAck {
 }
 
 /// Gateway 对 Agent 状态上报的确认响应。
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct AgentStatusAck {
-    pub agent_id: String,
-    pub instance_id: String,
-    pub acknowledged_at: String,
-}
+///
+/// 归属 **`agent/status` seam**（[`crate::agent_status`]）：这里**只 re-export**，
+/// 不在本模块再写第二份定义——同 crate 里两份同名报文正是本 crate 要消灭的漂移
+/// （wire 相同，但任一侧改字段就会变成「同名不同形」，编译器无法帮你发现）。
+pub use crate::agent_status::AgentStatusAck;
 
 pub const REPORT_AGENT_FACT_SUMMARY_KIND: &str = "report_agent_fact_summary";
 

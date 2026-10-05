@@ -14,3 +14,35 @@ pub use v1::*;
 
 /// 当前线上版本。新代码从这里取版本口径；并存期由路由/协商决定。
 pub const CURRENT: &str = v1::API_VERSION;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `CURRENT` 必须钉在 `v1`（与路由 `/api/v1/…` 一致），并与版本子模块同源。
+    #[test]
+    fn current_matches_the_live_wire_version() {
+        assert_eq!(CURRENT, "v1");
+        assert_eq!(CURRENT, v1::API_VERSION);
+    }
+
+    /// 编译期身份断言：本模块 re-export 的领域类型**就是** `wist-contracts` 的那几个
+    /// （若有人另抄一份，下面的函数体将类型不匹配而编译失败）。
+    #[test]
+    fn domain_types_are_the_contracts_ones() {
+        #[allow(dead_code)]
+        fn assert_identity() {
+            fn uplink_state(v: wist_contracts::agent_uplink::AgentUplinkState) -> AgentUplinkState {
+                v
+            }
+            fn host(v: wist_contracts::enrollment::HostProfile) -> HostProfile {
+                v
+            }
+            fn local_work(v: wist_contracts::local_work::AgentLocalWork) -> AgentLocalWork {
+                v
+            }
+            let _ = (uplink_state, host, local_work);
+        }
+        assert_identity();
+    }
+}

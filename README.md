@@ -20,9 +20,17 @@ keeping a copy each (the classic drift bug: same seam, two structs, one of them 
 
 ## Modules
 
-| Module       | Seam                              | Endpoints                     |
-| ------------ | --------------------------------- | ----------------------------- |
-| `enrollment` | `agent/enroll`, `agent/credentials:renew` | gateway ↔ agentd       |
+| Module         | Seam                                                                       | Endpoints          |
+| -------------- | -------------------------------------------------------------------------- | ------------------ |
+| `enrollment`   | `agent/enroll`, `agent/credentials:renew`                                   | gateway ↔ agentd   |
+| `agent_status` | `agent/status`                                                              | gateway ↔ agentd   |
+| `work`         | `agent/work:poll`, `agent/work:ack`, `agent/work:result`                    | gateway ↔ agentd   |
+| `agent_uplink` | `agent/uplink:poll`                                                         | gateway ↔ agentd   |
+| `gateway`      | `agent/action-plan`, `agent/action-results`, `agent/facts`, `agent/discovery-policies` | gateway ↔ agentd |
+
+Each module follows the same versioned layout — `mod.rs` (version-independent domain re-exports,
+`pub use v1::*`, `CURRENT`) + `v1.rs` (the frozen v1 baseline). Adding a `v2` means adding `v2.rs`
+and a new route, never branching inside a struct (`api-seam-inventory.md` §7).
 
 Seam messages reference **domain types** shared by more than one seam (`HostProfile` is used by both
 `agent/enroll` and `agent/status`). Those stay in [`wist-contracts`](../wist-contracts) — the common base

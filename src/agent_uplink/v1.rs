@@ -12,7 +12,7 @@ pub const POLL_AGENT_UPLINK_KIND: &str = "poll_agent_uplink";
 
 /// agentd → 网关：拉取数据面上送启用。
 ///
-/// 与 `wist_contracts::work::PollWork` 同形（同一套 agent 凭据、同一份实例标识），
+/// 与 [`crate::work::PollWork`] 同形（同一套 agent 凭据、同一份实例标识），
 /// 因为它是同一类「拉期望状态」的动作；只是期望状态的内容不同。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -26,7 +26,7 @@ pub struct PollAgentUplink {
 
 /// 网关 → agentd：数据面上送的当前期望状态。
 ///
-/// 与 `wist_contracts::work::WorkGrant` 同类：描述的是「这个 Agent 的上送现在应当是什么样」这个
+/// 与 [`crate::work::WorkGrant`] 同类：描述的是「这个 Agent 的上送现在应当是什么样」这个
 /// 领域事实（幂等、可重复拉取），而不是一次协议动作。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
