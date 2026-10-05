@@ -3,6 +3,16 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.2.0] - 2026-10-05
+
+### 新增
+
+- **`agent_status` seam 模块**：`agent/status` 的报文收进本 crate ——
+  `AgentStatusReport`（agentd 周期上报）/ `AgentStatusAck`（回执），以及
+  `AgentWorkState` / `AgentWorkStateChange` / `AgentCertificateStatus` / `AgentCredentialRenewal`，
+  由 `wist-contracts::gateway` 迁来（**线上 JSON 不变**）。re-export 引用到的 `HostProfile` /
+  `AgentLocalWork` / `AgentUplinkState`；结构沿用版本子模块（`agent_status::v1` + `CURRENT`）。
+
 ## [0.1.2] - 2026-10-05
 
 ### 变更

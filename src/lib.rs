@@ -10,4 +10,5 @@
 //! — the common base of every participant — and are re-exported here so callers can pull a
 //! whole seam from one place. `wist-contracts` keeps data-plane / internal objects only.
 
+pub mod agent_status;
 pub mod enrollment;
