@@ -26,4 +26,63 @@ pub mod v1;
 pub use v1::*;
 
 /// 当前线上版本。新代码从这里取版本口径；并存期由路由/协商决定。
-pub const CURRENT: &str = "v1";
+pub const CURRENT: &str = v1::API_VERSION;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `CURRENT` 必须与 v1 报文里填的 `api_version` 一致（不至两处各说各话）。
+    #[test]
+    fn current_matches_the_live_wire_version() {
+        let request = v1::EnrollmentRequest::new(
+            "t".to_string(),
+            "cr".to_string(),
+            "csr".to_string(),
+            HostProfile {
+                node_id: "n".to_string(),
+                hostname: "h".to_string(),
+                os: "linux".to_string(),
+                arch: "x86_64".to_string(),
+                machine_id: "m".to_string(),
+                cloud_instance_id: None,
+                k8s_node_uid: None,
+                ip_addresses: vec![],
+            },
+            "caps".to_string(),
+            "2026-09-28T00:00:00Z".to_string(),
+        );
+        assert_eq!(request.api_version, CURRENT);
+    }
+
+    /// 编译期身份断言：本模块 re-export 的领域类型**就是** `wist-contracts` 的那几个
+    /// （若有人另抄一份，下面的函数体将类型不匹配而编译失败）。
+    #[test]
+    fn domain_types_are_the_contracts_ones() {
+        #[allow(dead_code)]
+        fn assert_identity() {
+            fn host(v: wist_contracts::enrollment::HostProfile) -> HostProfile {
+                v
+            }
+            fn agent(v: wist_contracts::enrollment::AgentIdentity) -> AgentIdentity {
+                v
+            }
+            fn agent_status(
+                v: wist_contracts::enrollment::AgentIdentityStatus,
+            ) -> AgentIdentityStatus {
+                v
+            }
+            fn cred(v: wist_contracts::enrollment::CredentialBundle) -> CredentialBundle {
+                v
+            }
+            fn init(v: wist_contracts::enrollment::InitialConfig) -> InitialConfig {
+                v
+            }
+            fn policy(v: wist_contracts::enrollment::PolicyBinding) -> PolicyBinding {
+                v
+            }
+            let _ = (host, agent, agent_status, cred, init, policy);
+        }
+        assert_identity();
+    }
+}

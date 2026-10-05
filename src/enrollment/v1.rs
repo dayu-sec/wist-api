@@ -12,6 +12,9 @@ use wist_contracts::API_VERSION_V1;
 pub const SUBMIT_ENROLLMENT_REQUEST_KIND: &str = "submit_enrollment_request";
 pub const RENEW_AGENT_CREDENTIAL_KIND: &str = "renew_agent_credential";
 
+/// 本版本的线上版本号（与路由 `/api/v1/…` 一致）。
+pub const API_VERSION: &str = API_VERSION_V1;
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct EnrollmentRequest {
@@ -40,7 +43,7 @@ impl EnrollmentRequest {
         requested_at: String,
     ) -> Self {
         Self {
-            api_version: API_VERSION_V1.to_string(),
+            api_version: API_VERSION.to_string(),
             kind: SUBMIT_ENROLLMENT_REQUEST_KIND.to_string(),
             token,
             credential_request,
@@ -104,7 +107,7 @@ impl CredentialRenewal {
         requested_at: String,
     ) -> Self {
         Self {
-            api_version: API_VERSION_V1.to_string(),
+            api_version: API_VERSION.to_string(),
             kind: RENEW_AGENT_CREDENTIAL_KIND.to_string(),
             agent_id,
             instance_id,
@@ -240,5 +243,90 @@ mod tests {
         assert_eq!(envelope.result.status, EnrollmentStatus::Rejected);
         assert!(envelope.result.issued_identity.is_none());
         assert!(envelope.result.credential_bundle.is_none());
+    }
+
+    /// `EnrollmentRequest::new` 必须带上**本版本号**与稳定 kind（seam 的两把“钥匙”）。
+    #[test]
+    fn new_fills_the_wire_version_and_kind() {
+        let request = EnrollmentRequest::new(
+            "t".to_string(),
+            "cr".to_string(),
+            "csr".to_string(),
+            sample_host_profile(),
+            "caps".to_string(),
+            "2026-09-28T00:00:00Z".to_string(),
+        );
+        assert_eq!(request.api_version, super::API_VERSION);
+        assert_eq!(request.kind, super::SUBMIT_ENROLLMENT_REQUEST_KIND);
+    }
+
+    /// 钉住 `EnrollmentRequest` 的**线上字段集**：多一个/少一个都会在此失败。
+    #[test]
+    fn enrollment_request_wire_keys_are_stable() {
+        let request = EnrollmentRequest::new(
+            "t".to_string(),
+            "cr".to_string(),
+            "csr".to_string(),
+            sample_host_profile(),
+            "caps".to_string(),
+            "2026-09-28T00:00:00Z".to_string(),
+        );
+        let value = serde_json::to_value(&request).expect("encode");
+        let mut keys: Vec<&str> = value
+            .as_object()
+            .expect("object")
+            .keys()
+            .map(String::as_str)
+            .collect();
+        keys.sort_unstable();
+        assert_eq!(
+            keys,
+            [
+                "api_version",
+                "capability_summary",
+                "certificate_signing_request",
+                "credential_request",
+                "host_profile",
+                "kind",
+                "requested_at",
+                "token",
+            ]
+        );
+    }
+
+    /// 钉住 `EnrollmentOutcome` 的**线上字段集**（回执报文）。
+    #[test]
+    fn enrollment_outcome_wire_keys_are_stable() {
+        let outcome = EnrollmentOutcome {
+            status: EnrollmentStatus::Accepted,
+            reason_code: None,
+            agent_id: None,
+            instance_id: None,
+            issued_identity: None,
+            credential_bundle: None,
+            initial_config: None,
+            policy_binding: None,
+        };
+        let value = serde_json::to_value(&outcome).expect("encode");
+        let mut keys: Vec<&str> = value
+            .as_object()
+            .expect("object")
+            .keys()
+            .map(String::as_str)
+            .collect();
+        keys.sort_unstable();
+        assert_eq!(
+            keys,
+            [
+                "agent_id",
+                "credential_bundle",
+                "initial_config",
+                "instance_id",
+                "issued_identity",
+                "policy_binding",
+                "reason_code",
+                "status",
+            ]
+        );
     }
 }
