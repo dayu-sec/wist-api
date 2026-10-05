@@ -3,6 +3,13 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.1.1] - 2026-10-05
+
+### 变更
+
+- 依赖 `wist-contracts` 由 `0.2` 升到 **`0.3`**（后者移出了本 crate 承接的 enrollment 报文；
+  领域类型不变）。
+
 ## [0.1.0] - 2026-10-05
 
 首个版本：把跨进程 **API seam** 的报文收进一个独立 crate，让「同一条 seam 两侧用同一份定义」。

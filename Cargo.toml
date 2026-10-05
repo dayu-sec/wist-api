@@ -1,6 +1,6 @@
 [package]
 name = "wist-api"
-version = "0.1.0" #@gxl:set(version)
+version = "0.1.1" #@gxl:set(version)
 edition = "2024"
 license = "Apache-2.0"
 authors = ["wist Dev Team"]
@@ -16,7 +16,8 @@ categories = ["data-structures", "network-programming"]
 # `wist-contracts`（两侧共同底座）；本 crate 只拥有「跨进程报文」这一层，故依赖 contracts。
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-wist-contracts = { version = "0.2" }
+wist-contracts = { version = "0.3" }
+#wist-contracts = { version = "0.3", path = "../wist-contracts" }
 
 [dev-dependencies]
 serde_json = "1.0"
