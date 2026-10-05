@@ -1,14 +1,17 @@
-//! Gateway envelope contract types.
+//! `gateway` 面 agent seam 报文 —— **v1** 基线（action-plan / action-results / facts / discovery-policies）。
+//!
+//! 冻结基线：只做**加性**兼容不动它；非加性变更就新开 `v2`。
 
 use serde::{Deserialize, Serialize};
 
 use wist_contracts::API_VERSION_V1;
 
-/// 报文引用的领域类型（被多条 seam 复用），仍留在 `wist-contracts`；这里 re-export，
-/// 调用方可以从 `wist_api::gateway` 一处取齐。
-pub use wist_contracts::action_plan::ActionPlan;
-pub use wist_contracts::action_result::{ActionResult, FinalStatus};
-pub use wist_contracts::discovery_policy::{DiscoveryAspectPolicy, DiscoveryAspectPolicySet};
+use super::{
+    ActionPlan, ActionResult, DiscoveryAspectPolicy, DiscoveryAspectPolicySet, FinalStatus,
+};
+
+/// 本版本的线上版本号（与路由 `/api/v1/…` 一致）。
+pub const API_VERSION: &str = API_VERSION_V1;
 
 pub const DISPATCH_ACTION_PLAN_KIND: &str = "dispatch_action_plan";
 pub const ACTION_PLAN_ACK_KIND: &str = "action_plan_ack";

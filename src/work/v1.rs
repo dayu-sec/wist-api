@@ -1,13 +1,13 @@
-//! `agent/work:*` seam 报文：拉取授权快照（`PollWork`/`WorkGrant`）、确认（`AckWork`/`WorkAccepted`）、
-//! 上报执行结果（`ReportWorkResult`/`WorkResultAccepted`）。
+//! `agent/work:*` seam 报文 —— **v1** 基线。
 //!
-//! 「工作参数与状态」类**领域**类型（`WorkSpec*` / `WorkKind` / `StandingWork` / `OneShotWork` 等）
-//! 不是报文，仍留在 `wist-contracts`；这里 re-export `WorkGrant` 内嵌到的那两个。
+//! 冻结基线：只做**加性**兼容不动它；非加性变更就新开 `v2`。
 
 use serde::{Deserialize, Serialize};
 
-// 报文内嵌的领域类型仍留在 `wist-contracts`。
-pub use wist_contracts::work::{OneShotWork, StandingWork};
+use super::{OneShotWork, StandingWork};
+
+/// 本版本的线上版本号（与路由 `/api/v1/…` 一致）。
+pub const API_VERSION: &str = wist_contracts::API_VERSION_V1;
 
 /// agentd → 网关：拉取工作授权快照的 envelope kind。
 pub const POLL_WORK_KIND: &str = "poll_work";

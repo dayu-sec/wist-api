@@ -1,11 +1,11 @@
-//! `agent/uplink:poll` seam 报文：`PollAgentUplink`（拉取）与 `AgentUplinkGrant`（下发）。
+//! `agent/uplink:poll` seam 报文 —— **v1** 基线。
 //!
-//! 「实际生效状态」`AgentUplinkState` **不是报文**，仍留在 `wist-contracts`；这里 re-export。
+//! 冻结基线：只做**加性**兼容不动它；非加性变更就新开 `v2`。
 
 use serde::{Deserialize, Serialize};
 
-// 报文引用的领域/状态类型仍留在 `wist-contracts`。
-pub use wist_contracts::agent_uplink::AgentUplinkState;
+/// 本版本的线上版本号（与路由 `/api/v1/…` 一致）。
+pub const API_VERSION: &str = wist_contracts::API_VERSION_V1;
 
 /// agentd → 网关：拉取数据面上送启用的 envelope kind。
 pub const POLL_AGENT_UPLINK_KIND: &str = "poll_agent_uplink";

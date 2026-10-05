@@ -3,6 +3,14 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.5.0] - 2026-10-05
+
+### 变更
+
+- **`gateway` / `work` / `agent_uplink` 规范成 `v1` 子模块结构**（与 `enrollment` / `agent_status`
+  一致）：新增 `<mod>::v1::API_VERSION` 与 `<mod>::CURRENT`；报文路径 `<mod>::<Item>` 经
+  `pub use v1::*` **保持不变**（无破坏）。
+
 ## [0.4.0] - 2026-10-05
 
 ### 新增
