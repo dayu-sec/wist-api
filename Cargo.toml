@@ -1,0 +1,25 @@
+[package]
+name = "wist-api"
+version = "0.1.0" #@gxl:set(version)
+edition = "2024"
+license = "Apache-2.0"
+authors = ["wist Dev Team"]
+description = "Cross-process API seam messages for the wist control plane (edge <-> gateway <-> center)."
+repository = "https://github.com/dayu-sec/wist-api"
+homepage = "https://github.com/dayu-sec/wist-api"
+documentation = "https://docs.rs/wist-api"
+readme = "README.md"
+keywords = ["wist", "api", "seam", "contract", "control"]
+categories = ["data-structures", "network-programming"]
+
+# seam 报文引用的**领域类型**（HostProfile / CredentialBundle / AgentIdentity …）仍在
+# `wist-contracts`（两侧共同底座）；本 crate 只拥有「跨进程报文」这一层，故依赖 contracts。
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+wist-contracts = { version = "0.2" }
+
+[dev-dependencies]
+serde_json = "1.0"
+
+[lib]
+path = "src/lib.rs"
