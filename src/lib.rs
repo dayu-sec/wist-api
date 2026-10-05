@@ -11,5 +11,7 @@
 //! whole seam from one place. `wist-contracts` keeps data-plane / internal objects only.
 
 pub mod agent_status;
+pub mod agent_uplink;
 pub mod enrollment;
 pub mod gateway;
+pub mod work;

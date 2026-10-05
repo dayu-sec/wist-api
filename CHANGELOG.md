@@ -3,6 +3,21 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.4.0] - 2026-10-05
+
+### 新增
+
+- **`work` seam 模块**：`PollWork` / `WorkGrant` / `AckWork` / `WorkAccepted` / `ReportWorkResult` /
+  `WorkResultAccepted` + kind 常量（由 `wist-contracts::work` 迁来，**线上 JSON 不变**）；
+  re-export `WorkGrant` 内嵌的 `StandingWork` / `OneShotWork`。
+- **`agent_uplink` seam 模块**：`PollAgentUplink` / `AgentUplinkGrant`（由 `wist-contracts::agent_uplink`
+  迁来，**线上 JSON 不变**）。「状态」类 `AgentUplinkState` 仍留 `wist-contracts`，这里 re-export。
+
+### 说明
+
+- 这是「报文 vs 领域」的切分：**报文**进本 crate，**领域 / 状态**（`WorkSpec*` / `WorkKind` /
+  `StandingWork` / `OneShotWork` / 状态常量 / 可执行性判定 …）留在 `wist-contracts`。
+
 ## [0.3.0] - 2026-10-05
 
 ### 新增
