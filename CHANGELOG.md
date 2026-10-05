@@ -3,6 +3,17 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.3.0] - 2026-10-05
+
+### 新增
+
+- **`gateway` seam 模块**：agent 面其余 seam 报文整体收进本 crate —— action-plan
+  （`DispatchActionPlan` / `ActionPlanAck` / `AckStatus`）、action-results（`ReportActionResult` /
+  `ResultAttestation` / `ActionResultAck`）、facts（`ReportAgentFactSummary` / `FactSummaryAccepted` /
+  `FactSummaryAckStatus`）、discovery-policies（`PollDiscoveryPolicies` / `DiscoveryPoliciesReturned`）
+  及 kind 常量。由 `wist-contracts::gateway` 整体迁来（**线上 JSON 不变**）；re-export 引用到的
+  `ActionPlan` / `ActionResult` / `FinalStatus` / `DiscoveryAspectPolicy(Set)`。
+
 ## [0.2.0] - 2026-10-05
 
 ### 新增

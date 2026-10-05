@@ -12,3 +12,4 @@
 
 pub mod agent_status;
 pub mod enrollment;
+pub mod gateway;
