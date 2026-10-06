@@ -1,6 +1,6 @@
 # wist-api
 
-Cross-process **API seam** messages for the `wist` control plane (edge ↔ gateway ↔ center).
+Cross-process **agent-seam** messages for the `wist` control plane (gateway ↔ agentd).
 
 [![crates.io](https://img.shields.io/crates/v/wist-api.svg)](https://crates.io/crates/wist-api)
 [![docs.rs](https://img.shields.io/docsrs/wist-api/latest.svg)](https://docs.rs/wist-api)
@@ -15,18 +15,25 @@ seam = { route, request body, response body, owner, compat, api_version }
 ```
 
 Runtime coupling happens on seams, not on the crate graph — a crate is only the carrier of a message.
-`wist-api` owns the **wire messages** of each seam so both endpoints `use` a single definition instead of
-keeping a copy each (the classic drift bug: same seam, two structs, one of them silently older).
+`wist-api` owns the **wire messages** of each agent-facing seam so gateway and agentd `use` a single
+definition instead of keeping a copy each (the classic drift bug: same seam, two structs, one of
+them silently older). The center-facing seams (`gateway/register`, `gateway/status`, …) are
+generated into [`wist-control`](../wist-control) and are not owned here.
 
 ## Modules
 
-| Module         | Seam                                                                       | Endpoints          |
-| -------------- | -------------------------------------------------------------------------- | ------------------ |
-| `enrollment`   | `agent/enroll`, `agent/credentials:renew`                                   | gateway ↔ agentd   |
-| `agent_status` | `agent/status`                                                              | gateway ↔ agentd   |
-| `work`         | `agent/work:poll`, `agent/work:ack`, `agent/work:result`                    | gateway ↔ agentd   |
-| `agent_uplink` | `agent/uplink:poll`                                                         | gateway ↔ agentd   |
-| `gateway`      | `agent/action-plan`, `agent/action-results`, `agent/facts`, `agent/discovery-policies` | gateway ↔ agentd |
+One module per **seam topic**, mapping to one route:
+
+| Module                | Seam                                                            | Endpoints          |
+| --------------------- | --------------------------------------------------------------- | ------------------ |
+| `enrollment`          | `agent/enroll`, `agent/credentials:renew`                        | gateway ↔ agentd   |
+| `status`              | `agent/status`                                                   | gateway ↔ agentd   |
+| `uplink`              | `agent/uplink:poll`                                             | gateway ↔ agentd   |
+| `work`                | `agent/work:poll`, `agent/work:ack`, `agent/work:result`        | gateway ↔ agentd   |
+| `action_plan`         | `agent/action-plan`                                             | gateway ↔ agentd   |
+| `action_result`       | `agent/action-results`                                          | gateway ↔ agentd   |
+| `facts`               | `agent/facts`                                                   | gateway ↔ agentd   |
+| `discovery_policies`  | `agent/discovery-policies:poll`                                 | gateway ↔ agentd   |
 
 Each module follows the same versioned layout — `mod.rs` (version-independent domain re-exports,
 `pub use v1::*`, `CURRENT`) + `v1.rs` (the frozen v1 baseline). Adding a `v2` means adding `v2.rs`
@@ -39,6 +46,9 @@ of every participant — and are re-exported here so callers can pull a whole se
 ## Related crates
 
 - [`wist-contracts`](../wist-contracts) — shared domain / data-plane contract objects.
+- [`wist-control`](../wist-control) — owns the **center-facing** seam messages (`gateway/register`,
+  `gateway/status`, …), generated from the model; not part of this crate.
+- [`wist-validate`](../wist-validate) — static validators over these seam messages.
 - [`wist-gateway`](../wist-gateway) — the receiving side of the `agent/*` seams.
 - [`wist-agentd`](../wist-agentd) — the sending side of the `agent/*` seams.
 

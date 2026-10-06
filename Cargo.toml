@@ -1,10 +1,10 @@
 [package]
 name = "wist-api"
-version = "0.5.1" #@gxl:set(version)
+version = "0.6.0" #@gxl:set(version)
 edition = "2024"
 license = "Apache-2.0"
 authors = ["wist Dev Team"]
-description = "Cross-process API seam messages for the wist control plane (edge <-> gateway <-> center)."
+description = "Cross-process agent-seam messages for the wist control plane (gateway <-> agentd)."
 repository = "https://github.com/dayu-sec/wist-api"
 homepage = "https://github.com/dayu-sec/wist-api"
 documentation = "https://docs.rs/wist-api"

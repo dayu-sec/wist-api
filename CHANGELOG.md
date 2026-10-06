@@ -3,6 +3,37 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.6.0] - 2026-10-06
+
+### 变更（不兼容）
+
+- **模块名统一到「seam 主题」口径**。同族此前混着两套口径，且 `gateway` 是「接收方进程」名，却装了
+  4 条互不相干的 agent seam（杂物袋）。现统一为「**一个模块 = 一条 seam 路由**」的裸主题名
+  （与 `api-seam-inventory.md` §7「一条 seam = 一组 `{route, req, resp}`」一致）：
+  - `agent_status` → **`wist_api::status`**（`agent/status`）
+  - `agent_uplink` → **`wist_api::uplink`**（`agent/uplink:poll`）
+  - `gateway` 拆成 4 个：
+    - `wist_api::action_plan` — `DispatchActionPlan` / `ActionPlanAck` / `ActionPlanAckBuilder` /
+      `AckStatus` + `DISPATCH_ACTION_PLAN_KIND` / `ACTION_PLAN_ACK_KIND`（`agent/action-plan`）
+    - `wist_api::action_result` — `ReportActionResult` / `ResultAttestation` / `ActionResultAck` +
+      `REPORT_ACTION_RESULT_KIND`（`agent/action-results`）
+    - `wist_api::facts` — `ReportAgentFactSummary` / `FactSummaryAccepted` / `FactSummaryAckStatus` +
+      `REPORT_AGENT_FACT_SUMMARY_KIND`（`agent/facts`）
+    - `wist_api::discovery_policies` — `PollDiscoveryPolicies` / `DiscoveryPoliciesReturned` +
+      `POLL_DISCOVERY_POLICIES_KIND`（`agent/discovery-policies:poll`）
+
+  改完 8 个模块口径一致：`enrollment` / `status` / `uplink` / `work` / `action_plan` /
+  `action_result` / `facts` / `discovery_policies`。
+  **线上 JSON 全不变**（包括 `kind` 串、`api_version`）；消费方只需改 `use` 路径。原 re-export
+  别名模块 `wist_api::gateway`（含 `gateway::AgentStatusAck`）随之删除——`AgentStatusAck` 仍是
+  `status` 里的唯一定义。
+
+### 文档
+
+- crate 定位修正为**只承载 agent 面 seam**（`gateway ↔ agentd`）：center 面 seam（`gateway/register`、
+  `gateway/status` …）由 `wist-control` 按模型生成，原 `edge ↔ gateway ↔ center` 描述过宽。
+  README 模块表按 seam 主题重列（一个模块一行）。
+
 ## [0.5.1] - 2026-10-06
 
 审查后的收口与测试补齐。**非破坏**（公共路径不变）。

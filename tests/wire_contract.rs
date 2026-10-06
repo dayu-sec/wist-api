@@ -11,7 +11,9 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
-use wist_api::{agent_status, agent_uplink, enrollment, gateway, work};
+use wist_api::{
+    action_plan, action_result, discovery_policies, enrollment, facts, status, uplink, work,
+};
 
 /// 黄金样例 → 类型 → 再编码 → 再解码：必须得到同一个值（形状稳定，且能两侧互认）。
 fn round_trip<T>(golden: &str) -> T
@@ -155,19 +157,25 @@ fn envelope_kinds_are_stable() {
             enrollment::RENEW_AGENT_CREDENTIAL_KIND,
             "renew_agent_credential",
         ),
-        (agent_uplink::POLL_AGENT_UPLINK_KIND, "poll_agent_uplink"),
+        (uplink::POLL_AGENT_UPLINK_KIND, "poll_agent_uplink"),
         (work::POLL_WORK_KIND, "poll_work"),
         (work::ACK_WORK_KIND, "ack_work"),
         (work::REPORT_WORK_RESULT_KIND, "report_work_result"),
-        (gateway::DISPATCH_ACTION_PLAN_KIND, "dispatch_action_plan"),
-        (gateway::ACTION_PLAN_ACK_KIND, "action_plan_ack"),
-        (gateway::REPORT_ACTION_RESULT_KIND, "report_action_result"),
         (
-            gateway::REPORT_AGENT_FACT_SUMMARY_KIND,
+            action_plan::DISPATCH_ACTION_PLAN_KIND,
+            "dispatch_action_plan",
+        ),
+        (action_plan::ACTION_PLAN_ACK_KIND, "action_plan_ack"),
+        (
+            action_result::REPORT_ACTION_RESULT_KIND,
+            "report_action_result",
+        ),
+        (
+            facts::REPORT_AGENT_FACT_SUMMARY_KIND,
             "report_agent_fact_summary",
         ),
         (
-            gateway::POLL_DISCOVERY_POLICIES_KIND,
+            discovery_policies::POLL_DISCOVERY_POLICIES_KIND,
             "poll_discovery_policies",
         ),
     ];
@@ -188,10 +196,13 @@ fn envelope_kinds_are_stable() {
 fn seam_versions_are_v1() {
     for (label, current) in [
         ("enrollment", enrollment::CURRENT),
-        ("agent_status", agent_status::CURRENT),
-        ("agent_uplink", agent_uplink::CURRENT),
-        ("gateway", gateway::CURRENT),
+        ("status", status::CURRENT),
+        ("uplink", uplink::CURRENT),
         ("work", work::CURRENT),
+        ("action_plan", action_plan::CURRENT),
+        ("action_result", action_result::CURRENT),
+        ("facts", facts::CURRENT),
+        ("discovery_policies", discovery_policies::CURRENT),
     ] {
         assert_eq!(
             current, "v1",
@@ -201,18 +212,21 @@ fn seam_versions_are_v1() {
 
     // 各版本子模块的 API_VERSION 也必须落在 v1。
     assert_eq!(enrollment::v1::API_VERSION, "v1");
-    assert_eq!(agent_status::v1::API_VERSION, "v1");
-    assert_eq!(agent_uplink::v1::API_VERSION, "v1");
-    assert_eq!(gateway::v1::API_VERSION, "v1");
+    assert_eq!(status::v1::API_VERSION, "v1");
+    assert_eq!(uplink::v1::API_VERSION, "v1");
     assert_eq!(work::v1::API_VERSION, "v1");
+    assert_eq!(action_plan::v1::API_VERSION, "v1");
+    assert_eq!(action_result::v1::API_VERSION, "v1");
+    assert_eq!(facts::v1::API_VERSION, "v1");
+    assert_eq!(discovery_policies::v1::API_VERSION, "v1");
 }
 
 // ── 3. 各 seam 的字段集 + 兼容策略 ───────────────────────────────────────
 
 #[test]
-fn agent_status_seam_wire_contract() {
-    round_trip::<agent_status::AgentStatusReport>(AGENT_STATUS_REPORT);
-    assert_keys::<agent_status::AgentStatusReport>(
+fn status_seam_wire_contract() {
+    round_trip::<status::AgentStatusReport>(AGENT_STATUS_REPORT);
+    assert_keys::<status::AgentStatusReport>(
         AGENT_STATUS_REPORT,
         &[
             "admin_latency_ms",
@@ -230,26 +244,26 @@ fn agent_status_seam_wire_contract() {
             "work_state_changes",
         ],
     );
-    rejects_unknown::<agent_status::AgentStatusReport>(AGENT_STATUS_REPORT);
+    rejects_unknown::<status::AgentStatusReport>(AGENT_STATUS_REPORT);
 
-    assert_keys::<agent_status::AgentStatusAck>(
+    assert_keys::<status::AgentStatusAck>(
         AGENT_STATUS_ACK,
         &["acknowledged_at", "agent_id", "instance_id"],
     );
-    assert_keys::<agent_status::AgentCertificateStatus>(
+    assert_keys::<status::AgentCertificateStatus>(
         AGENT_CERTIFICATE_STATUS,
         &["last_renewal", "not_after", "remaining_seconds", "state"],
     );
-    assert_keys::<agent_status::AgentWorkStateChange>(
+    assert_keys::<status::AgentWorkStateChange>(
         AGENT_WORK_STATE_CHANGE,
         &["at", "input_id", "reason", "state"],
     );
-    rejects_unknown::<agent_status::AgentWorkStateChange>(AGENT_WORK_STATE_CHANGE);
+    rejects_unknown::<status::AgentWorkStateChange>(AGENT_WORK_STATE_CHANGE);
 }
 
 #[test]
-fn agent_uplink_seam_wire_contract() {
-    assert_keys::<agent_uplink::PollAgentUplink>(
+fn uplink_seam_wire_contract() {
+    assert_keys::<uplink::PollAgentUplink>(
         POLL_AGENT_UPLINK,
         &[
             "agent_id",
@@ -259,8 +273,8 @@ fn agent_uplink_seam_wire_contract() {
             "requested_at",
         ],
     );
-    rejects_unknown::<agent_uplink::PollAgentUplink>(POLL_AGENT_UPLINK);
-    rejects_unknown::<agent_uplink::AgentUplinkGrant>(AGENT_UPLINK_GRANT);
+    rejects_unknown::<uplink::PollAgentUplink>(POLL_AGENT_UPLINK);
+    rejects_unknown::<uplink::AgentUplinkGrant>(AGENT_UPLINK_GRANT);
 }
 
 #[test]
@@ -320,15 +334,15 @@ fn work_seam_wire_contract() {
 }
 
 #[test]
-fn gateway_seam_wire_contract() {
-    round_trip::<gateway::DispatchActionPlan>(DISPATCH_ACTION_PLAN);
-    assert_keys::<gateway::DispatchActionPlan>(
+fn action_plan_seam_wire_contract() {
+    round_trip::<action_plan::DispatchActionPlan>(DISPATCH_ACTION_PLAN);
+    assert_keys::<action_plan::DispatchActionPlan>(
         DISPATCH_ACTION_PLAN,
         &["api_version", "dispatch_id", "kind", "plan"],
     );
-    rejects_unknown::<gateway::DispatchActionPlan>(DISPATCH_ACTION_PLAN);
+    rejects_unknown::<action_plan::DispatchActionPlan>(DISPATCH_ACTION_PLAN);
 
-    assert_keys::<gateway::ActionPlanAck>(
+    assert_keys::<action_plan::ActionPlanAck>(
         ACTION_PLAN_ACK,
         &[
             "ack_status",
@@ -347,10 +361,13 @@ fn gateway_seam_wire_contract() {
             "received_at",
         ],
     );
-    rejects_unknown::<gateway::ActionPlanAck>(ACTION_PLAN_ACK);
+    rejects_unknown::<action_plan::ActionPlanAck>(ACTION_PLAN_ACK);
+}
 
-    round_trip::<gateway::ReportActionResult>(REPORT_ACTION_RESULT);
-    assert_keys::<gateway::ReportActionResult>(
+#[test]
+fn action_result_seam_wire_contract() {
+    round_trip::<action_result::ReportActionResult>(REPORT_ACTION_RESULT);
+    assert_keys::<action_result::ReportActionResult>(
         REPORT_ACTION_RESULT,
         &[
             "action_id",
@@ -369,19 +386,22 @@ fn gateway_seam_wire_contract() {
             "result_attestation",
         ],
     );
-    rejects_unknown::<gateway::ReportActionResult>(REPORT_ACTION_RESULT);
+    rejects_unknown::<action_result::ReportActionResult>(REPORT_ACTION_RESULT);
 
-    assert_keys::<gateway::ResultAttestation>(
+    assert_keys::<action_result::ResultAttestation>(
         RESULT_ATTESTATION,
         &["attested_at", "issued_by", "result_digest", "signature"],
     );
-    assert_keys::<gateway::ActionResultAck>(
+    assert_keys::<action_result::ActionResultAck>(
         ACTION_RESULT_ACK,
         &["acknowledged_at", "agent_id", "report_id"],
     );
+}
 
-    round_trip::<gateway::ReportAgentFactSummary>(REPORT_AGENT_FACT_SUMMARY);
-    assert_keys::<gateway::ReportAgentFactSummary>(
+#[test]
+fn facts_seam_wire_contract() {
+    round_trip::<facts::ReportAgentFactSummary>(REPORT_AGENT_FACT_SUMMARY);
+    assert_keys::<facts::ReportAgentFactSummary>(
         REPORT_AGENT_FACT_SUMMARY,
         &[
             "agent_id",
@@ -404,9 +424,9 @@ fn gateway_seam_wire_contract() {
             "revision",
         ],
     );
-    rejects_unknown::<gateway::ReportAgentFactSummary>(REPORT_AGENT_FACT_SUMMARY);
+    rejects_unknown::<facts::ReportAgentFactSummary>(REPORT_AGENT_FACT_SUMMARY);
 
-    assert_keys::<gateway::FactSummaryAccepted>(
+    assert_keys::<facts::FactSummaryAccepted>(
         FACT_SUMMARY_ACCEPTED,
         &[
             "ack_status",
@@ -417,8 +437,11 @@ fn gateway_seam_wire_contract() {
             "suggestion_id",
         ],
     );
+}
 
-    assert_keys::<gateway::PollDiscoveryPolicies>(
+#[test]
+fn discovery_policies_seam_wire_contract() {
+    assert_keys::<discovery_policies::PollDiscoveryPolicies>(
         POLL_DISCOVERY_POLICIES,
         &[
             "agent_id",
@@ -428,8 +451,8 @@ fn gateway_seam_wire_contract() {
             "requested_at",
         ],
     );
-    rejects_unknown::<gateway::PollDiscoveryPolicies>(POLL_DISCOVERY_POLICIES);
-    assert_keys::<gateway::DiscoveryPoliciesReturned>(
+    rejects_unknown::<discovery_policies::PollDiscoveryPolicies>(POLL_DISCOVERY_POLICIES);
+    assert_keys::<discovery_policies::DiscoveryPoliciesReturned>(
         DISCOVERY_POLICIES_RETURNED,
         &["policies", "policy_version", "published_at", "returned_at"],
     );
@@ -461,9 +484,10 @@ fn enrollment_seam_wire_contract() {
 
 #[test]
 fn enum_wire_names_are_stable_and_unknown_variants_fail() {
-    use agent_status::AgentWorkState;
+    use action_plan::AckStatus;
     use enrollment::EnrollmentStatus;
-    use gateway::{AckStatus, FactSummaryAckStatus};
+    use facts::FactSummaryAckStatus;
+    use status::AgentWorkState;
 
     for (value, expected) in [
         (AgentWorkState::Paused, "paused"),
@@ -518,14 +542,14 @@ fn enum_wire_names_are_stable_and_unknown_variants_fail() {
 
 // ── 5. 单一定义：`AgentStatusAck` 只有一份 ──────────────────────────────
 
-/// `AgentStatusAck` 只有**一份定义**（`agent_status` seam）；`gateway` 路径只是 re-export。
-/// 若哪天在 `gateway` 里又「复制一份」，这个函数体就会类型不匹配而编译失败。
+/// `AgentStatusAck` 只有**一份定义**（`status` seam）。
+/// 若哪天在别处又「复制一份」，这个函数体就会类型不匹配而编译失败。
 #[test]
-fn agent_status_ack_has_a_single_definition() {
-    fn is_the_agent_status_one(v: gateway::AgentStatusAck) -> agent_status::AgentStatusAck {
+fn status_ack_has_a_single_definition() {
+    fn is_the_status_one(v: status::AgentStatusAck) -> status::AgentStatusAck {
         v
     }
-    let ack: agent_status::AgentStatusAck = round_trip(AGENT_STATUS_ACK);
-    let same = is_the_agent_status_one(ack);
+    let ack: status::AgentStatusAck = round_trip(AGENT_STATUS_ACK);
+    let same = is_the_status_one(ack);
     assert_eq!(same.agent_id, "agent-1");
 }

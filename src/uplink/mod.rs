@@ -23,7 +23,7 @@ mod tests {
     }
 
     /// 编译期身份断言：`AgentUplinkState` **就是** `wist-contracts` 的那一个（
-    /// `agent_status` 与 `agent_uplink` 两处 re-export 必须指向同一类型）。
+    /// `status` 与 `uplink` 两处 re-export 必须指向同一类型）。
     #[test]
     fn domain_types_are_the_contracts_ones() {
         #[allow(dead_code)]
@@ -31,10 +31,10 @@ mod tests {
             fn uplink_state(v: wist_contracts::agent_uplink::AgentUplinkState) -> AgentUplinkState {
                 v
             }
-            fn same_as_agent_status(v: AgentUplinkState) -> crate::agent_status::AgentUplinkState {
+            fn same_as_status_seam(v: AgentUplinkState) -> crate::status::AgentUplinkState {
                 v
             }
-            let _ = (uplink_state, same_as_agent_status);
+            let _ = (uplink_state, same_as_status_seam);
         }
         assert_identity();
     }
