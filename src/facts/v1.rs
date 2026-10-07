@@ -73,6 +73,7 @@ pub struct ReportAgentFactSummary {
     #[serde(default)]
     pub host_name: String,
     /// 网卡地址（每块网卡一条，形如 `en0 192.168.1.5/24`）。
+    /// 已滤掉链路本地（`fe80::/10`）/ 回环 / IPv4 自分配 —— 展示口径与机器画像一致。
     #[serde(default)]
     pub network_addresses: Vec<String>,
     pub reported_at: String,
