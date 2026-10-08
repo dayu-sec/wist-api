@@ -16,7 +16,7 @@ categories = ["data-structures", "network-programming"]
 # `wist-contracts`（两侧共同底座）；本 crate 只拥有「跨进程报文」这一层，故依赖 contracts。
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-wist-contracts = { version = "0.3" }
+wist-contracts = { version = "0.7" }
 #wist-contracts = { version = "0.3", path = "../wist-contracts" }
 
 [dev-dependencies]
