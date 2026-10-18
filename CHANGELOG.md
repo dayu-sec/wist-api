@@ -3,6 +3,21 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.9.0] - 2026-10-18
+
+### 新增
+
+- **`agent/facts` 上报增加路径探测结果**：`ReportAgentFactSummary` 增加 `probed_paths` /
+  `present_paths`（`serde(default)`），用 `with_probe_paths` 补齐 —— 不往已有 13 个位置参数的
+  构造函数里再加两个。
+- **`agent/discovery-policies:poll` 返回 `probe_paths`**：网关从采集目录的 `path_exists:` 条件推导；
+  旧网关不带该字段时为空表（不探测）。
+
+### 升级说明
+
+- 两个新字段都带默认值，但两侧报文统一 `deny_unknown_fields`：**新 agentd → 旧网关**会因未知字段
+  被拒整份上报。发布顺序：网关先、agentd 后。
+
 ## [0.8.0] - 2026-10-11
 
 ### 变更（不兼容）
