@@ -417,6 +417,8 @@ fn facts_seam_wire_contract() {
             "observed_at",
             "os",
             "packages",
+            "present_paths",
+            "probed_paths",
             "process_count",
             "process_executables",
             "report_id",
@@ -454,7 +456,13 @@ fn discovery_policies_seam_wire_contract() {
     rejects_unknown::<discovery_policies::PollDiscoveryPolicies>(POLL_DISCOVERY_POLICIES);
     assert_keys::<discovery_policies::DiscoveryPoliciesReturned>(
         DISCOVERY_POLICIES_RETURNED,
-        &["policies", "policy_version", "published_at", "returned_at"],
+        &[
+            "policies",
+            "policy_version",
+            "probe_paths",
+            "published_at",
+            "returned_at",
+        ],
     );
 }
 

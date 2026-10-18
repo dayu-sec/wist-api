@@ -41,6 +41,9 @@ pub struct DiscoveryPoliciesReturned {
     pub policy_version: i64,
     pub published_at: String,
     pub policies: Vec<DiscoveryAspectPolicy>,
+    /// 待探测的路径白名单（由网关从采集目录的 `match` 条件推导）。
+    #[serde(default)]
+    pub probe_paths: Vec<String>,
     pub returned_at: String,
 }
 
@@ -54,6 +57,7 @@ impl DiscoveryPoliciesReturned {
             policy_version: set.policy_version,
             published_at: set.published_at.clone(),
             policies: set.policies.clone(),
+            probe_paths: set.probe_paths.clone(),
             returned_at,
         }
     }

@@ -60,12 +60,23 @@ pub struct ReportAgentFactSummary {
     /// 已装包名（仅 linux；macOS 侧待定）。
     pub packages: Vec<String>,
     pub listen_ports: Vec<String>,
+    /// 网关下发、本机**实际探测过**的路径白名单。
+    ///
+    /// 与 `present_paths` 一起才能区分「没探测」（Unknown）与「探测了但不存在」（No）——
+    /// 只报存在项的话，空列表会同时意味着这两件事。
+    #[serde(default)]
+    pub probed_paths: Vec<String>,
+    /// 其中存在的路径（`probed_paths` 的子集）。
+    #[serde(default)]
+    pub present_paths: Vec<String>,
     // ── 以下三个是**留痕/展示**字段：**不进内容摘要**，也不参与判重 ──
     //
     // 为什么不进摘要：摘要回答的是「内容变了没有」（幂等键与用途判据的输入）。
     // 机器名、IP 会因 DHCP/改名而变，但它们不影响「这台机器是干什么用的」——
     // 放进摘要会让每次换网就触发一次重报与重算。所以它们只用于展示与追溯。
-    // 也正因如此，`fact-v1` 的字段集**没变**，不需要 bump 版本、不需要强制重报。
+    // 也正因如此，这些展示字段加入时没有 bump 摘要版本；但 **路径探测字段不同**：
+    // 它们决定 `path_exists` 求值（进而决定派不派这份工作），所以进摘要，
+    // `FactContent` 已随之升到 `fact-v2`。
     /// 主机标识（发现里 `host` 方向的 `host.id`）。
     #[serde(default)]
     pub host_id: String,
@@ -111,11 +122,26 @@ impl ReportAgentFactSummary {
             process_executables,
             packages,
             listen_ports,
+            probed_paths: Vec::new(),
+            present_paths: Vec::new(),
             host_id: String::new(),
             host_name: String::new(),
             network_addresses: Vec::new(),
             reported_at,
         }
+    }
+
+    /// 补上**路径探测**结果（参与内容摘要：它决定 `path_exists` 是 Yes / No / Unknown）。
+    ///
+    /// 与 `with_display` 同理，不往构造函数里再加两个位置参数。
+    pub fn with_probe_paths(
+        mut self,
+        probed_paths: Vec<String>,
+        present_paths: Vec<String>,
+    ) -> Self {
+        self.probed_paths = probed_paths;
+        self.present_paths = present_paths;
+        self
     }
 
     /// 补上**留痕/展示**字段（不参与内容摘要与判重）。
@@ -168,7 +194,7 @@ mod tests {
             "fact_1".to_string(),
             "agent-1".to_string(),
             "inst-1".to_string(),
-            "fact-v1:sha256:abc".to_string(),
+            "fact-v2:sha256:abc".to_string(),
             7,
             "2026-09-27T00:00:00Z".to_string(),
             "macos".to_string(),
