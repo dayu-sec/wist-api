@@ -3,6 +3,26 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.9.1] - 2026-10-23
+
+### 新增（D7 能力协商）
+
+- **`AgentStatusReport` 增 `logs_capabilities`**（可选）：agent 报自己能承接的
+  `file_inputs` / `multiline_modes` / `exporters`（类型定义在
+  `wist_contracts::capability_report::LogsCapabilities`）。
+
+  为什么不让网关按 `version` 推：版本号只能回答“新旧”，回答不了“这一版在**这个环境**里
+  真能不能采”（导出器依赖的二进制可能没装）。而回滚场景里最容易出错的正是
+  “新目录 + 回滚后的 agent” —— 网关必须看 agent **自己说了什么**。
+
+  `None` = 旧 agentd 没报：网关按“未知”处理，依赖新能力（glob / 新导出器）的单元不算可采。
+
+### 兼容性
+
+- 只增可选字段，旧 agentd 不报仍能解析。
+- ⚠ 反方向不兼容：本结构是 `deny_unknown_fields` 的，旧网关收到新字段会**整份拒收**。
+  所以 D7 的发布顺序是**网关先升级**，agentd 才能开始带这个字段。
+
 ## [0.9.0] - 2026-10-18
 
 ### 新增

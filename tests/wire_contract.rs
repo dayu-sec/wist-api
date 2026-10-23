@@ -237,6 +237,7 @@ fn status_seam_wire_contract() {
             "discovery_policy_version",
             "instance_id",
             "local_work",
+            "logs_capabilities",
             "machine_profile",
             "memory_bytes",
             "uplink_state",

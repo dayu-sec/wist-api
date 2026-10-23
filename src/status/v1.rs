@@ -6,6 +6,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use wist_contracts::capability_report::LogsCapabilities;
+
 use super::{AgentLocalWork, AgentUplinkState, HostProfile};
 
 /// 本版本的线上版本号（与路由 `/api/v1/…` 一致）。
@@ -103,6 +105,17 @@ pub struct AgentStatusReport {
     /// `None` = 老版本 agentd 没带 —— 落库后保持上一次的值（与 `local_work` / `uplink_state` 同口径）。
     #[serde(default)]
     pub machine_profile: Option<HostProfile>,
+    /// 本机**能承接的日志形态 / 导出器**（D7 能力协商）。
+    ///
+    /// 为什么要 agent 报、而不是网关按 `version` 推：版本号只能回答“新旧”，回答不了
+    /// “这一版在**这个环境**里真能不能采”（导出器依赖的二进制可能没装、单层 glob 支持是
+    /// 一个具体能力而不是一个版本）。而回滚场景里最容易出错的就是“新目录 + 回滚后的 agent” ——
+    /// 网关必须看**它自己说了什么**。
+    ///
+    /// `None` = 旧版本 agentd 没报：网关按“未知”处理 —— 依赖新能力（glob / 新导出器）的单元
+    /// **不算可采**，宁可少派也不派下去报 unsupported。
+    #[serde(default)]
+    pub logs_capabilities: Option<LogsCapabilities>,
 }
 
 /// agent 本地客户端证书状态（上报给网关，供页面/告警展示）。
@@ -250,5 +263,29 @@ mod tests {
             "last_renewal":{"outcome":"renewed","checked_at":"t","detail":"","not_after":"",
             "extra":1}}"#;
         assert!(serde_json::from_str::<AgentCertificateStatus>(drifted).is_err());
+    }
+
+    /// D7：能力清单可选；旧 agentd 不带时必须是 `None`（网关据此按“未知”处理）。
+    #[test]
+    fn logs_capabilities_are_optional_and_round_trip() {
+        let legacy = r#"{"agent_id":"a","instance_id":"i","version":"0.8.0"}"#;
+        let report: AgentStatusReport = serde_json::from_str(legacy).expect("decode");
+        assert!(report.logs_capabilities.is_none());
+
+        let json = r#"{"agent_id":"a","instance_id":"i","version":"0.9.0",
+            "logs_capabilities":{
+                "file_inputs":["absolute-path","glob"],
+                "multiline_modes":["none","indented"],
+                "exporters":["journalctl-kernel"]
+            }}"#;
+        let report: AgentStatusReport = serde_json::from_str(json).expect("decode");
+        let logs = report.logs_capabilities.expect("logs_capabilities");
+        assert_eq!(logs.exporters, vec!["journalctl-kernel".to_string()]);
+        assert!(logs.file_inputs.contains(&"glob".to_string()));
+
+        // 字段漂移仍要显形（与同族结构一致）。
+        let drifted = r#"{"agent_id":"a","instance_id":"i","version":"v",
+            "logs_capabilities":{"file_inputs":[],"nope":1}}"#;
+        assert!(serde_json::from_str::<AgentStatusReport>(drifted).is_err());
     }
 }
