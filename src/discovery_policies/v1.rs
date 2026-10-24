@@ -82,11 +82,18 @@ mod tests {
                 platforms: vec!["macos".to_string(), "linux".to_string()],
                 yields: "os/arch".to_string(),
             }],
-        );
+        )
+        // 白名单是网关从采集目录推导后拼上来的，**不是**策略表自带的：
+        // 少了这一行，agent 就永远不探测（见 agentd 0.9.2 的修复）。
+        .with_probe_paths(vec!["/var/log/postgresql".to_string()]);
         let returned =
             DiscoveryPoliciesReturned::from_set(&set, "2026-09-27T00:00:01Z".to_string());
         assert_eq!(returned.policy_version, 4);
         assert_eq!(returned.policies, set.policies);
+        assert_eq!(
+            returned.probe_paths,
+            vec!["/var/log/postgresql".to_string()]
+        );
         assert_eq!(returned.returned_at, "2026-09-27T00:00:01Z");
 
         let json = serde_json::to_string(&returned).expect("encode");

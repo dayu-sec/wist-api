@@ -59,6 +59,7 @@ pub struct ReportAgentFactSummary {
     pub process_executables: Vec<String>,
     /// 已装包名（仅 linux；macOS 侧待定）。
     pub packages: Vec<String>,
+    /// 稳定的服务端口，形如 `tcp:5432`（已滤掉内核临时端口区间 `>= 32768`）。
     pub listen_ports: Vec<String>,
     /// 网关下发、本机**实际探测过**的路径白名单。
     ///
@@ -76,7 +77,7 @@ pub struct ReportAgentFactSummary {
     // 放进摘要会让每次换网就触发一次重报与重算。所以它们只用于展示与追溯。
     // 也正因如此，这些展示字段加入时没有 bump 摘要版本；但 **路径探测字段不同**：
     // 它们决定 `path_exists` 求值（进而决定派不派这份工作），所以进摘要，
-    // `FactContent` 已随之升到 `fact-v2`。
+    // `FactContent` 已随之升到 `fact-v2`（当前版本见 `FACT_DIGEST_VERSION`）。
     /// 主机标识（发现里 `host` 方向的 `host.id`）。
     #[serde(default)]
     pub host_id: String,
