@@ -63,6 +63,32 @@ impl DiscoveryPoliciesReturned {
     }
 }
 
+impl From<DiscoveryPoliciesReturned> for DiscoveryAspectPolicySet {
+    /// 把下发的响应收成 agentd 内部的策略表。
+    ///
+    /// **这是两端之间唯一的转换**：以前调用方拿 `DiscoveryAspectPolicySet::new(..)` 自己重建，
+    /// 而那个构造器不认识后加的字段 —— `probe_paths` 就这么被丢过一次，导致 `path_exists:`
+    /// 判定的面（数据库 / 容器 stdout）在真机上永远授不了权。
+    ///
+    /// 两侧都**穷尽解构**：以后无论哪边加字段，编译器会直接指到这儿（而不是静默丢掉）。
+    /// `returned_at` 不属于策略表，只做展示，所以显式丢弃。
+    fn from(returned: DiscoveryPoliciesReturned) -> Self {
+        let DiscoveryPoliciesReturned {
+            policy_version,
+            published_at,
+            policies,
+            probe_paths,
+            returned_at: _, // 下发时刻：给人看的，不进策略表
+        } = returned;
+        Self {
+            policy_version,
+            published_at,
+            policies,
+            probe_paths,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -99,6 +125,13 @@ mod tests {
         let json = serde_json::to_string(&returned).expect("encode");
         let back: DiscoveryPoliciesReturned = serde_json::from_str(&json).expect("decode");
         assert_eq!(back, returned);
+
+        // 两端之间只有这一条转换：策略表里的每一项（含后加的 `probe_paths`）都必须原样到达。
+        assert_eq!(
+            DiscoveryAspectPolicySet::from(back),
+            set,
+            "下发响应 → 内部策略表必须逐字段无损"
+        );
     }
 
     #[test]

@@ -3,6 +3,21 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.9.2] - 2026-10-24
+
+### 新增
+
+- **`impl From<DiscoveryPoliciesReturned> for DiscoveryAspectPolicySet`**：两端之间的
+  **唯一**转换，两侧都是穷尽解构 —— 以后无论哪一边加字段，编译器都会直接指到这里。
+  以前调用方用 `DiscoveryAspectPolicySet::new(..)` 自己重建，而那个构造器不认识后加字段；
+  `probe_paths` 就这么被丢过一次（agentd 0.9.2 修复），代价是 `path_exists:` 判定的面
+  （数据库 / 容器 stdout）在真机上永远授不了权。
+
+### 测试
+
+- `from_set` 的用例补上 `probe_paths`：以前造表用的就是那个会把白名单置空的构造器，
+  所以“网关漏拷一行”也能全绿 —— 这条链路的**两端**现在都有断言了。
+
 ## [0.9.1] - 2026-10-23
 
 ### 新增（D7 能力协商）
