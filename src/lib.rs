@@ -10,7 +10,8 @@
 //! `agent/credentials:renew`), `status` (`agent/status`), `uplink` (`agent/uplink:poll`),
 //! `work` (`agent/work:*`), `action_plan` (`agent/action-plan`), `action_result`
 //! (`agent/action-results`), `facts` (`agent/facts`), `discovery_policies`
-//! (`agent/discovery-policies:poll`).
+//! (`agent/discovery-policies:poll`), `discovery_snapshot`
+//! (`agent/discovery-snapshot:poll`).
 //!
 //! Seam messages reference **domain types** that are shared by more than one seam
 //! (`HostProfile`, `CredentialBundle`, `AgentIdentity`, …). Those live in `wist-contracts`
@@ -20,6 +21,7 @@
 pub mod action_plan;
 pub mod action_result;
 pub mod discovery_policies;
+pub mod discovery_snapshot;
 pub mod enrollment;
 pub mod facts;
 pub mod status;

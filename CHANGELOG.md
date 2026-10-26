@@ -3,6 +3,32 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.9.3] - 2026-10-26
+
+### 新增
+
+- **`status` seam：通用的一次性命令信封**（`AgentStatusAck.commands` +
+  `AgentCommand`；`AgentStatusReport.command_acks` + `AgentCommandAck`）。
+  复用了 agentd 每 3s 的状态上报回执 —— agent 没有入站监听面，这是唯一由网关**回话**的通道。
+  - 报文只承载**一个开放信封**：`{ command_id, requested_at_ms, kind, params }`；
+    新增一种命令只加 `command_kind` 里的一个值，**不再改报文形状**（未知 `kind` 由 agent 回
+    `unsupported`，不至于让整份回执解析失败）。
+  - 结果同样是开放词表：`succeeded` / `failed` / `no_uplink` / `throttled` / `stale` / `unsupported`，
+    另有两个**仅网关侧**的值 `superseded`（被同 kind 的新命令覆盖）/ `expired`（超过待执行窗口）——
+    它们出现在管理面查询里，agent 不会回这两个值。
+  - 首个实现：`kind = "refresh_facts"`（网关发起重采 + 重报）。
+  - ⚠ 升级顺序：`AgentStatusReport` 是 `deny_unknown_fields`，**gateway 必须先于 agentd**；
+    否则旧网关会拒收带 `command_acks` 的新报文（与本文件其它新增字段同一条规则）。
+  - 两个字段都是空集合时省略：没有命令 / 没有结果时字段不出现，旧对端不受影响。
+
+- **`discovery_snapshot` seam**（`agent/discovery-snapshot:poll`）：`PollDiscoverySnapshot` /
+  `DiscoverySnapshotGrant`，用于控制面按机器下发「原文快照（DSNAP）上送」的开关与周期。
+  - 刻意新开端点，而不是给 `AgentUplinkGrant` / `DiscoveryPoliciesReturned` 加字段：那两个契约
+    两侧都 `deny_unknown_fields`，加字段会让「新网关 + 旧 agentd」解析失败。独立端点两个方向
+    都安全（旧 agentd 不调用；新 agentd 遇旧网关 404 后回落本机配置）。
+  - 请求里可搭车 `AppliedDiscoverySnapshot`（实际生效值），让管理面看到「配置 vs 生效」。
+  - 网关**没有设置**时回 `204`：Agent 继续用本机 `[discovery]`，而不是被一个空设置压掉。
+
 ## [0.9.2] - 2026-10-24
 
 ### 新增

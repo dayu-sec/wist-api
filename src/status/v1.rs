@@ -116,6 +116,13 @@ pub struct AgentStatusReport {
     /// **不算可采**，宁可少派也不派下去报 unsupported。
     #[serde(default)]
     pub logs_capabilities: Option<LogsCapabilities>,
+    /// 本机对网关下发的**一次性命令**的处理结果（见 [`AgentCommandAck`]）。
+    ///
+    /// 空 = 本次没有要确认的命令，字段不出现。**加性字段**：本结构是
+    /// `deny_unknown_fields`，所以部署顺序必须 **gateway 先于 agentd**（与本文件其它
+    /// 新增字段同一条规则，见 `CHANGELOG` 的升级提示）。
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub command_acks: Vec<AgentCommandAck>,
 }
 
 /// agent 本地客户端证书状态（上报给网关，供页面/告警展示）。
@@ -160,11 +167,80 @@ pub struct AgentStatusAck {
     pub agent_id: String,
     pub instance_id: String,
     pub acknowledged_at: String,
+    /// 网关下发的待执行命令；没有命令时字段不出现。
+    ///
+    /// 为什么放在回执里：agent 没有入站监听面，状态上报（3s）是唯一由网关**回话**的通道。
+    /// 这里放的是**通用命令信封**（`kind` + 可选参数），而不是每条命令一个字段 ——
+    /// 新增一种命令只加一个 kind 词表值，不再改报文形状。
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub commands: Vec<AgentCommand>,
+}
+
+/// 网关下发给 agent 的一次性命令。
+///
+/// 与「期望状态」（工作 / 上送 / 策略）刻意分开：那些是可重拉的幂等快照，
+/// 这里是**一次执行**的动作，有明确的 `command_id`、结果与去重语义。
+///
+/// `command_id` 是去重键：agent 把处理过的命令写进本地台账，网关在没有收到
+/// `command_acks` 时会重发同一条；agent 见到同一个 id 不重复跑，只补结果。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AgentCommand {
+    pub command_id: String,
+    /// 网关受理时刻（墙钟毫秒）：agent 用它判过期。
+    pub requested_at_ms: i64,
+    /// 命令词表（见 [`command_kind`]）。**开放字符串**：未知值由 agent 回
+    /// `unsupported`，而不是让整份回执解析失败。
+    pub kind: String,
+    /// 命令参数（JSON 文本；空 = 无参数）。不同 `kind` 自己解析，未知字段不进入本层。
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub params: String,
+}
+
+/// agent 对一条命令的处理结果（随下一次状态上报回传）。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AgentCommandAck {
+    pub command_id: String,
+    /// 见 [`command_outcome`]。
+    pub outcome: String,
+    /// 人读细节（失败原因 / 探针统计…）；无内容时省略。
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub detail: String,
+}
+
+/// 命令词表（`AgentCommand.kind`）。新增命令只在这里加一个值 + 一个执行分支。
+pub mod command_kind {
+    /// 立刻重采一次并上报事实（见 agentd `refresh-facts`）。
+    pub const REFRESH_FACTS: &str = "refresh_facts";
+}
+
+/// 命令结果词表（`AgentCommandAck.outcome`）。
+pub mod command_outcome {
+    /// 执行完成，效果已生效（重采：事实已上报）。
+    pub const SUCCEEDED: &str = "succeeded";
+    /// 执行了，但没达到目标（重采：事实上报失败）。
+    pub const FAILED: &str = "failed";
+    /// 执行了，但本机没有可用的上送通道（重采：输出是 `file`）。
+    pub const NO_UPLINK: &str = "no_uplink";
+    /// 没执行：本地最小间隔未到。
+    pub const THROTTLED: &str = "throttled";
+    /// 没执行：命令过期（网关下发后很久才被拿到）。
+    pub const STALE: &str = "stale";
+    /// 不认识这种 `kind`（旧 agent 收到新命令）。
+    pub const UNSUPPORTED: &str = "unsupported";
+    /// **仅网关侧**：未执行的旧命令被同 kind 的新命令覆盖。agent 不会回这个值。
+    pub const SUPERSEDED: &str = "superseded";
+    /// **仅网关侧**：命令超过待执行窗口（旧 agent 不认、或长期离线），网关不再下发。
+    pub const EXPIRED: &str = "expired";
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{AgentCertificateStatus, AgentStatusReport, AgentWorkState, AgentWorkStateChange};
+    use super::{
+        AgentCertificateStatus, AgentCommandAck, AgentStatusAck, AgentStatusReport, AgentWorkState,
+        AgentWorkStateChange, command_outcome,
+    };
 
     #[test]
     fn agent_work_state_uses_snake_case_on_the_wire() {
@@ -205,6 +281,8 @@ mod tests {
         assert!(report.certificate_status.is_none());
         // 机器画像同样是可选的：旧版 agent 不带 -> None（网关落库时保持上一次的值）。
         assert!(report.machine_profile.is_none());
+        // 命令结果同样可选（旧 agent 不带 = 没有要确认的命令）。
+        assert!(report.command_acks.is_empty());
 
         assert!(
             serde_json::from_str::<AgentStatusReport>(
@@ -287,5 +365,70 @@ mod tests {
         let drifted = r#"{"agent_id":"a","instance_id":"i","version":"v",
             "logs_capabilities":{"file_inputs":[],"nope":1}}"#;
         assert!(serde_json::from_str::<AgentStatusReport>(drifted).is_err());
+    }
+
+    /// 回执里可以带一批通用命令；旧网关不带这个字段时仍然是合法回执。
+    #[test]
+    fn a_status_ack_carries_optional_commands() {
+        let legacy = r#"{"agent_id":"a","instance_id":"i","acknowledged_at":"t"}"#;
+        let ack: AgentStatusAck = serde_json::from_str(legacy).expect("decode");
+        assert!(ack.commands.is_empty());
+
+        let json = r#"{"agent_id":"a","instance_id":"i","acknowledged_at":"t",
+            "commands":[{"command_id":"c-1","requested_at_ms":1700000000000,
+            "kind":"refresh_facts"}]}"#;
+        let ack: AgentStatusAck = serde_json::from_str(json).expect("decode");
+        assert_eq!(ack.commands.len(), 1);
+        let command = &ack.commands[0];
+        assert_eq!(command.command_id, "c-1");
+        assert_eq!(command.requested_at_ms, 1_700_000_000_000);
+        assert_eq!(command.kind, "refresh_facts");
+        assert!(command.params.is_empty());
+
+        // 没有命令时字段不出现：旧 agent（若未来开始解析回执）不会被空数组干扰。
+        let encoded = serde_json::to_string(&AgentStatusAck {
+            agent_id: "a".to_string(),
+            instance_id: "i".to_string(),
+            acknowledged_at: "t".to_string(),
+            commands: Vec::new(),
+        })
+        .expect("encode");
+        assert!(!encoded.contains("commands"));
+
+        // 命令里的字段漂移要显形。
+        let drifted = r#"{"agent_id":"a","instance_id":"i","acknowledged_at":"t",
+            "commands":[{"command_id":"c-1","requested_at_ms":1,
+            "kind":"refresh_facts","nope":1}]}"#;
+        assert!(serde_json::from_str::<AgentStatusAck>(drifted).is_err());
+    }
+
+    /// 未知 kind 是**合法字符串**（旧 agent 要靠它回 `unsupported`），不是解析错误。
+    #[test]
+    fn an_unknown_command_kind_still_decodes() {
+        let json = r#"{"agent_id":"a","instance_id":"i","acknowledged_at":"t",
+            "commands":[{"command_id":"c-9","requested_at_ms":1,"kind":"future_command"}]}"#;
+        let ack: AgentStatusAck = serde_json::from_str(json).expect("decode");
+        assert_eq!(ack.commands[0].kind, "future_command");
+    }
+
+    /// 新 agent 报告里的命令结果可选；旧 agent 不带时字段不出现。
+    #[test]
+    fn an_agent_status_report_can_carry_command_results() {
+        let legacy = r#"{"agent_id":"a","instance_id":"i","version":"0.9.0"}"#;
+        let report: AgentStatusReport = serde_json::from_str(legacy).expect("decode");
+        assert!(report.command_acks.is_empty());
+
+        let json = r#"{"agent_id":"a","instance_id":"i","version":"0.9.11",
+            "command_acks":[{"command_id":"c-1","outcome":"succeeded",
+            "detail":"probes=6 failed=0"}]}"#;
+        let report: AgentStatusReport = serde_json::from_str(json).expect("decode");
+        assert_eq!(
+            report.command_acks,
+            vec![AgentCommandAck {
+                command_id: "c-1".to_string(),
+                outcome: command_outcome::SUCCEEDED.to_string(),
+                detail: "probes=6 failed=0".to_string(),
+            }]
+        );
     }
 }
