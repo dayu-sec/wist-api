@@ -3,6 +3,24 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.9.4] - 2026-10-30
+
+### 新增
+
+- **`command_kind::INVESTIGATE`（`"investigate"`）**：一次性只读调查的命令 kind。
+  `params` 是题目自己的 JSON（`topic` + 题目选项），不认识的值由 agent 回 `unsupported`；
+  完整报告不走控制面 —— ack 只回结论摘要，报告本体走数据面 ` IVSREP: ` 帧。
+- **`AgentStatusReport.investigation_capabilities`**（加性字段）：agentd 上报自己实现的
+  调查面与是否 root（`wist_contracts::capability_report::InvestigationCapabilities`）。
+  网关据此**在入队前**校验——把“这台机器不会”与“命令执行失败”分开。
+  `None` = 旧 agentd 没报：网关按“未知”处理，只允许已确认支持的面。
+
+### 升级注意
+
+- 与同文件其它新增字段同一条规则：`AgentStatusReport` 是 `deny_unknown_fields` 的，
+  **gateway 必须先于 agentd**；否则旧网关会拒收带这个字段的新报文。
+- 依赖 `wist-contracts ≥ 0.9.9`（`InvestigationCapabilities` 在那里定）。
+
 ## [0.9.3] - 2026-10-26
 
 ### 新增

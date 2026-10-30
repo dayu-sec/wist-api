@@ -6,7 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use wist_contracts::capability_report::LogsCapabilities;
+use wist_contracts::capability_report::{InvestigationCapabilities, LogsCapabilities};
 
 use super::{AgentLocalWork, AgentUplinkState, HostProfile};
 
@@ -116,6 +116,16 @@ pub struct AgentStatusReport {
     /// **不算可采**，宁可少派也不派下去报 unsupported。
     #[serde(default)]
     pub logs_capabilities: Option<LogsCapabilities>,
+    /// 本机**调查能力**（见 [`InvestigationCapabilities`]）：能跑哪些调查面、是不是 root。
+    ///
+    /// 为什么要 agent 报、而不是网关按版本推：调查是**一次性只读操作**，网关必须在
+    /// **入队前**就知道这台机器认不认识这个面 —— 否则会把命令发下去换一个 `unsupported`，
+    /// 管理面上只会显示成「命令失败」，而真正原因是「这台机器不会 / 没权限」。
+    ///
+    /// `None` = 旧版本 agentd 没报：网关按「未知」处理 —— **只允许**它自己确认支持的面
+    /// （目前没有），宁可让菜单置灰，也不发一条注定失败的调查。
+    #[serde(default)]
+    pub investigation_capabilities: Option<InvestigationCapabilities>,
     /// 本机对网关下发的**一次性命令**的处理结果（见 [`AgentCommandAck`]）。
     ///
     /// 空 = 本次没有要确认的命令，字段不出现。**加性字段**：本结构是
@@ -213,6 +223,11 @@ pub struct AgentCommandAck {
 pub mod command_kind {
     /// 立刻重采一次并上报事实（见 agentd `refresh-facts`）。
     pub const REFRESH_FACTS: &str = "refresh_facts";
+    /// 一次性只读调查（见 agentd `investigate`）：当场查一个问题并给证据表。
+    ///
+    /// `params` 是题目自己的 JSON（`topic` + 题目选项）；不认识的值由 agent 回 `unsupported`。
+    /// 完整报告**不走这里**：ack 只回结论摘要，报告本体走数据面 ` IVSREP: ` 帧。
+    pub const INVESTIGATE: &str = "investigate";
 }
 
 /// 命令结果词表（`AgentCommandAck.outcome`）。

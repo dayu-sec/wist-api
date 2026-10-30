@@ -236,6 +236,7 @@ fn status_seam_wire_contract() {
             "cpu_percent",
             "discovery_policy_version",
             "instance_id",
+            "investigation_capabilities",
             "local_work",
             "logs_capabilities",
             "machine_profile",
@@ -246,6 +247,19 @@ fn status_seam_wire_contract() {
         ],
     );
     rejects_unknown::<status::AgentStatusReport>(AGENT_STATUS_REPORT);
+
+    // 调查能力（新增的**加性**字段）：老报文不带它也得能解（`None` = 未知），
+    // 带了就按契约解 —— 网关入队前靠它判断“这台机器会不会这道题”。
+    let with_capabilities: status::AgentStatusReport = serde_json::from_str(
+        r#"{"agent_id":"agent-1","instance_id":"inst-1","version":"0.11.0",
+            "investigation_capabilities":{"surfaces":["disk"],"privileged":true}}"#,
+    )
+    .expect("decode");
+    let capabilities = with_capabilities
+        .investigation_capabilities
+        .expect("capabilities present");
+    assert_eq!(capabilities.surfaces, vec!["disk".to_string()]);
+    assert!(capabilities.privileged);
 
     assert_keys::<status::AgentStatusAck>(
         AGENT_STATUS_ACK,
