@@ -3,6 +3,23 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.9.5] - 2026-11-01
+
+### 新增
+
+- **`command_outcome::ACCEPTED`（`"accepted"`）**：agent 侧的**阶段回报** —— 命令已被取走、
+  正在执行，终态随后还会再来一条。
+  网关收到它只记「已认领」（`claimed_at`），**不**结束投递（`acked_at` 仍为空）。
+  为什么需要它：一条目录调查默认要跑两分钟，而结果 ack 只在跑完之后才回 —— 没有这个阶段，
+  管理面整段扫描都只能显示「等待认领」，运维会以为命令丢了。
+
+### 升级注意
+
+- **gateway 必须先于 agentd**。`AgentCommandAck.outcome` 是开放字符串，旧网关不校验它，
+  于是会把 `accepted` 当成终态落库：命令被提前收口、结果再也对不上号。
+  新网关不认识这个词也没关系（旧 agentd 不会发）。
+- 不要把 `accepted` 当作终态词使用：它不是结果，只是「正在跑」的信号。
+
 ## [0.9.4] - 2026-10-30
 
 ### 新增

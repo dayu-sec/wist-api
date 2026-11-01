@@ -244,6 +244,12 @@ pub mod command_outcome {
     pub const STALE: &str = "stale";
     /// 不认识这种 `kind`（旧 agent 收到新命令）。
     pub const UNSUPPORTED: &str = "unsupported";
+    /// **agent 侧阶段回报**：命令已被取走、正在执行，终态还会再来一条。
+    ///
+    /// 网关收到它只记「已认领」（`claimed_at`），**不能**当终态 —— 一条 `disk` 调查
+    /// 默认要扫 120s，没有这个阶段的话，页面上「等待认领」会持续整个扫描时长，
+    /// 看起来像命令丢了。终态到达时再写 `acked_at` / `outcome` / `detail`。
+    pub const ACCEPTED: &str = "accepted";
     /// **仅网关侧**：未执行的旧命令被同 kind 的新命令覆盖。agent 不会回这个值。
     pub const SUPERSEDED: &str = "superseded";
     /// **仅网关侧**：命令超过待执行窗口（旧 agent 不认、或长期离线），网关不再下发。
@@ -445,5 +451,41 @@ mod tests {
                 detail: "probes=6 failed=0".to_string(),
             }]
         );
+    }
+
+    /// `accepted` 是 **跨版本协议词**：字面量一旦变，先发的那一侧就听不懂后发的一侧。
+    ///
+    /// 具体后果：agent 说新词、网关认旧词 → 网关当成终态落库，命令被提前收口、
+    /// 页面永远拿不到结果。所以这里把 wire 值钉死，而不是只靠常量名。
+    #[test]
+    fn an_accepted_command_ack_keeps_its_wire_name() {
+        assert_eq!(command_outcome::ACCEPTED, "accepted");
+
+        let ack = AgentCommandAck {
+            command_id: "c-1".to_string(),
+            outcome: command_outcome::ACCEPTED.to_string(),
+            detail: "已取走，扫描中（最长 120s）".to_string(),
+        };
+        let json = serde_json::to_string(&ack).expect("encode");
+        assert!(
+            json.contains(r#""outcome":"accepted""#),
+            "阶段回报的 wire 值变了：{json}"
+        );
+        assert_eq!(
+            serde_json::from_str::<AgentCommandAck>(&json).expect("decode"),
+            ack
+        );
+
+        // 旧 agent 只发终态词：`accepted` 不能与其中任何一个撞名。
+        for terminal in [
+            command_outcome::SUCCEEDED,
+            command_outcome::FAILED,
+            command_outcome::NO_UPLINK,
+            command_outcome::THROTTLED,
+            command_outcome::STALE,
+            command_outcome::UNSUPPORTED,
+        ] {
+            assert_ne!(command_outcome::ACCEPTED, terminal);
+        }
     }
 }
