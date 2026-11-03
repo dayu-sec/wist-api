@@ -130,7 +130,30 @@ pub fn is_valid_value(value: &str) -> bool {
 /// 准入一组选择类 label（键 / 值 / `env` / `role` / `tier` / `app` 依赖 / 数量）。
 ///
 /// 空表合法：等于「这台机器没有可用的选择类值」，调用方不得补默认值。
+///
+/// **用在「最终生效值」上**：`app` 依赖（`role` / `shard` / `tier` 必须有 `app`）只有看得到
+/// 全部三层（部署默认 ∪ 推断 ∪ 手工覆盖）时才判得准。只看其中一层会误伤 ——
+/// 例如手工删掉 `app` 覆盖、而推断层仍能给出 `app` 时，那组值是合法的。
 pub fn validate_labels(labels: &BTreeMap<String, String>) -> Result<(), LabelError> {
+    validate_shape(labels)?;
+    // 键组合：`role` / `shard` / `tier` 的含义随 `app` 变（§3.4 规则 6 / §13），
+    // 没有 `app` 就没有登记表可校验 —— 宁可拒，也不写一个无法解释的值。
+    if !labels.contains_key("app") {
+        for key in ["role", "shard", "tier"] {
+            if labels.contains_key(key) {
+                return Err(LabelError::OrphanKey(key.to_string()));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// 只判「单键自身」是否合法（键闭集 / 值文法 / `env` 闭集 / 词表 / 数量），**不判键组合**。
+///
+/// 写路径上「逐键增量」的那一层用它：一次 PUT 可能只改 `app` 一个键，此时中间态
+/// （`role` 还在、`app` 刚被删）不成立并不代表结果不成立 —— 组合校验交给
+/// [`validate_labels`] 在**合并后的生效值**上做。
+pub fn validate_shape(labels: &BTreeMap<String, String>) -> Result<(), LabelError> {
     if labels.len() > MAX_LABELS {
         return Err(LabelError::TooMany { got: labels.len() });
     }
@@ -161,15 +184,6 @@ pub fn validate_labels(labels: &BTreeMap<String, String>) -> Result<(), LabelErr
                 });
             }
             _ => {}
-        }
-    }
-    // 键组合：`role` / `shard` / `tier` 的含义随 `app` 变（§3.4 规则 6 / §13），
-    // 没有 `app` 就没有登记表可校验 —— 宁可拒，也不写一个无法解释的值。
-    if !labels.contains_key("app") {
-        for key in ["role", "shard", "tier"] {
-            if labels.contains_key(key) {
-                return Err(LabelError::OrphanKey(key.to_string()));
-            }
         }
     }
     Ok(())
@@ -247,6 +261,27 @@ mod tests {
         );
         // 没有 `app` 时 `region` / `zone` 仍然可用：它们不随 app 变。
         assert!(validate_labels(&labels(&[("env", "dev"), ("region", "cn-north")])).is_ok());
+    }
+
+    #[test]
+    fn shape_validation_ignores_the_app_dependency_on_purpose() {
+        // 逐键写入的中间态：`role` 在、`app` 刚被删。单键都合法，组合由生效值那一步判。
+        let mid = labels(&[("role", "broker")]);
+        assert_eq!(validate_shape(&mid), Ok(()));
+        assert_eq!(
+            validate_labels(&mid),
+            Err(LabelError::OrphanKey("role".to_string()))
+        );
+        // 除了组合之外，两条路径的判定必须完全一致。
+        for bad in [
+            labels(&[("service", "kafka")]),
+            labels(&[("env", "production")]),
+            labels(&[("cluster", "Kafka")]),
+            labels(&[("role", "leader")]),
+        ] {
+            assert_eq!(validate_shape(&bad), validate_labels(&bad), "{bad:?}");
+            assert!(validate_shape(&bad).is_err());
+        }
     }
 
     #[test]

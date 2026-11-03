@@ -3,6 +3,15 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.10.4] - 2026-11-03
+
+### 新增
+
+- **`metrics_labels::rules::validate_shape`**：只判单键自身（键闭集 / 值文法 / `env` 闭集 /
+  词表 / 数量），不判 `app` 依赖。写路径上的「逐键增量」用它 —— 一次 PUT 可能只改一个键，
+  中间态（`role` 还在、`app` 刚被删）不成立并不代表**合并后的生效值**不成立。
+  组合校验继续由 `validate_labels` 在生效值上做。
+
 ## [0.10.3] - 2026-11-03
 
 ### 变更
