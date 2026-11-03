@@ -6,6 +6,13 @@
 //!
 //! 本 seam 的报文只用基本类型组装，不内嵌共享领域类型；版本并存约定同
 //! [`crate::enrollment`]（见 `wist-design/doc/design/foundation/api-seam-inventory.md` §7）。
+//!
+//! ## 「加性兼容」在这里是什么、不是什么
+//!
+//! 报文都是 `deny_unknown_fields`，所以**给现有报文加字段不是加性变更** ——
+//! 旧对端会整份解析失败（agent 侧的后果是「保留旧缓存、再也不更新」，而且只在 5 分钟
+//! 一次的日志里留一行）。真正加性的做法是**新开端点 / 新开 `v2`**，与会话里其它 seam 一致。
+//! 想扩这个 seam 的字段时先看这句话，别直接往结构体里加。
 
 pub mod rules;
 pub mod v1;
