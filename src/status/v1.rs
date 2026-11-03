@@ -249,6 +249,11 @@ pub mod refresh_what {
     pub const CREDENTIALS: &str = "credentials";
     /// 上送开关与目标。**不进 `--all`**，只能显式请求。
     pub const UPLINK: &str = "uplink";
+
+    /// 全部已知来源（校验 `RefreshParams` 用；顺序 = 文档里的表格顺序）。
+    ///
+    /// 注意：这份表**不等于** `--all` 的范围 —— `uplink` / `credentials` 只能显式点名。
+    pub const ALL: &[&str] = &[FACTS, POLICIES, WORK, METRICS_LABELS, CREDENTIALS, UPLINK];
 }
 
 /// `refresh` 命令的参数。

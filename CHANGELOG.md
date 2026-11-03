@@ -3,6 +3,14 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.10.1] - 2026-11-03
+
+### 新增
+
+- **`refresh_what::ALL`**：全部已知刷新来源的常量表（校验 `RefreshParams` 用）。
+  放在这里而不是让两侧各写一份 —— 词表漂移的表现是「网关能发、agent 判成未知来源」，
+  而命令那时只会回一个 `failed`，排障要翻两边的源码。
+
 ## [0.10.0] - 2026-11-03
 
 ### 新增
