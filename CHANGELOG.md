@@ -3,6 +3,23 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.10.2] - 2026-11-03
+
+### 新增
+
+- **`ReportAgentFactSummary` 增加 `service_units` / `container_names`**（`#[serde(default)]`）：
+  选择类 label `app` 的**高置信度证据**（服务管理器单元名 / 容器名）。
+  二者**进内容摘要**（`FactContent`，摘要版本 `fact-v4`）—— 证据变了却不改摘要，
+  会让指标永远带着旧用途，且没有任何一层能发现。
+- `ReportAgentFactSummary::with_evidence(...)`：与 `with_probe_paths` / `with_display` 同形，
+  不往 13 个位置参数的构造函数里再加两个。
+
+### 升级注意
+
+- **网关与 agentd 应同批升级**：这两个字段在 `deny_unknown_fields` 的报文里，
+  旧网关收到新 agentd 的摘要是 400（整包拒收）。反过来（新网关 + 旧 agentd）没问题 ——
+  字段缺省为空，`app` 留空。
+
 ## [0.10.1] - 2026-11-03
 
 ### 新增

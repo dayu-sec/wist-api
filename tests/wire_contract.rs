@@ -130,7 +130,8 @@ const REPORT_AGENT_FACT_SUMMARY: &str = r#"{"api_version":"v1","kind":"report_ag
     "report_id":"rep-1","agent_id":"agent-1","instance_id":"inst-1","content_digest":"sha256:c",
     "revision":7,"observed_at":"2026-09-27T00:00:00Z","os":"macos","arch":"arm64",
     "process_count":3,"process_executables":["/bin/sh"],"packages":["curl"],
-    "listen_ports":["tcp/22"],"reported_at":"2026-09-27T00:00:01Z"}"#;
+    "listen_ports":["tcp/22"],"service_units":["kafka"],"container_names":["orders-api"],
+    "reported_at":"2026-09-27T00:00:01Z"}"#;
 
 const FACT_SUMMARY_ACCEPTED: &str = r#"{"report_id":"rep-1","agent_id":"agent-1",
     "content_digest":"sha256:c","ack_status":"accepted","suggestion_id":null,
@@ -457,6 +458,8 @@ fn facts_seam_wire_contract() {
             "report_id",
             "reported_at",
             "revision",
+            "service_units",
+            "container_names",
         ],
     );
     rejects_unknown::<facts::ReportAgentFactSummary>(REPORT_AGENT_FACT_SUMMARY);

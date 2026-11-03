@@ -88,6 +88,16 @@ pub struct ReportAgentFactSummary {
     /// 已滤掉链路本地（`fe80::/10`）/ 回环 / IPv4 自分配 —— 展示口径与机器画像一致。
     #[serde(default)]
     pub network_addresses: Vec<String>,
+    // ── 以下两项是**推断输入**（高置信度证据）：进内容摘要，见 `FactContent` ──
+    /// 服务管理器里的单元标识（systemd 单元去掉类型后缀、小写；如 `kafka`）。
+    ///
+    /// 只作为选择类 label `app` 的**候选证据**：网关拿它去命中注册表闭集，
+    /// 命不中就不写值 —— agent 不做业务判定。
+    #[serde(default)]
+    pub service_units: Vec<String>,
+    /// 容器名（k8s 下就是 pod spec 里的容器名；已小写）。
+    #[serde(default)]
+    pub container_names: Vec<String>,
     pub reported_at: String,
 }
 
@@ -128,6 +138,8 @@ impl ReportAgentFactSummary {
             host_id: String::new(),
             host_name: String::new(),
             network_addresses: Vec::new(),
+            service_units: Vec::new(),
+            container_names: Vec::new(),
             reported_at,
         }
     }
@@ -142,6 +154,17 @@ impl ReportAgentFactSummary {
     ) -> Self {
         self.probed_paths = probed_paths;
         self.present_paths = present_paths;
+        self
+    }
+
+    /// 补上**推断证据**（参与内容摘要：它决定这台机器的指标带不带 `app`）。
+    pub fn with_evidence(
+        mut self,
+        service_units: Vec<String>,
+        container_names: Vec<String>,
+    ) -> Self {
+        self.service_units = service_units;
+        self.container_names = container_names;
         self
     }
 
