@@ -228,6 +228,35 @@ pub mod command_kind {
     /// `params` 是题目自己的 JSON（`topic` + 题目选项）；不认识的值由 agent 回 `unsupported`。
     /// 完整报告**不走这里**：ack 只回结论摘要，报告本体走数据面 ` IVSREP: ` 帧。
     pub const INVESTIGATE: &str = "investigate";
+    /// 手工刷新一组“知识/期望状态”。`params` 是 [`crate::status::RefreshParams`] 的 JSON。
+    ///
+    /// 只覆盖可重复拉取的控制面数据；`uplink` 只能显式请求（直接决定“发不发、发到哪”）。
+    pub const REFRESH: &str = "refresh";
+}
+
+/// `refresh` 命令的可刷新来源词表（[`RefreshParams::what`] 的取值）。
+pub mod refresh_what {
+    /// 重采并重报事实（等价于已有的 `refresh_facts`）。
+    pub const FACTS: &str = "facts";
+    /// 发现策略（`discovery-policies:poll`）。
+    pub const POLICIES: &str = "policies";
+    /// 工作授权（`work:poll`）。
+    pub const WORK: &str = "work";
+    /// 选择类 label（`metrics-labels`）。**与 CLI 子命令同名**：运维在命令台账里读到的
+    /// 值必须能直接抄回 `--only`。
+    pub const METRICS_LABELS: &str = "metrics-labels";
+    /// 凭据续期（排障用，不进 `--all`）。
+    pub const CREDENTIALS: &str = "credentials";
+    /// 上送开关与目标。**不进 `--all`**，只能显式请求。
+    pub const UPLINK: &str = "uplink";
+}
+
+/// `refresh` 命令的参数。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RefreshParams {
+    /// 要刷新的来源（见 [`refresh_what`]）。空表由 agent 按“无效参数”处理。
+    pub what: Vec<String>,
 }
 
 /// 命令结果词表（`AgentCommandAck.outcome`）。
@@ -430,6 +459,20 @@ mod tests {
             "commands":[{"command_id":"c-9","requested_at_ms":1,"kind":"future_command"}]}"#;
         let ack: AgentStatusAck = serde_json::from_str(json).expect("decode");
         assert_eq!(ack.commands[0].kind, "future_command");
+    }
+
+    #[test]
+    fn refresh_params_round_trip() {
+        let params = super::RefreshParams {
+            what: vec![
+                super::refresh_what::WORK.to_string(),
+                super::refresh_what::METRICS_LABELS.to_string(),
+            ],
+        };
+        let text = serde_json::to_string(&params).expect("serialize");
+        assert_eq!(text, r#"{"what":["work","metrics-labels"]}"#);
+        let parsed: super::RefreshParams = serde_json::from_str(&text).expect("deserialize");
+        assert_eq!(parsed, params);
     }
 
     /// 新 agent 报告里的命令结果可选；旧 agent 不带时字段不出现。

@@ -12,7 +12,8 @@ use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
 use wist_api::{
-    action_plan, action_result, discovery_policies, enrollment, facts, status, uplink, work,
+    action_plan, action_result, discovery_policies, enrollment, facts, metrics_labels, status,
+    uplink, work,
 };
 
 /// 黄金样例 → 类型 → 再编码 → 再解码：必须得到同一个值（形状稳定，且能两侧互认）。
@@ -140,6 +141,21 @@ const POLL_DISCOVERY_POLICIES: &str = r#"{"api_version":"v1","kind":"poll_discov
 const DISCOVERY_POLICIES_RETURNED: &str = r#"{"policy_version":1,"published_at":"2026-09-27T00:00:00Z",
     "policies":[],"returned_at":"2026-09-27T00:00:01Z"}"#;
 
+const AGENT_METRICS_LABELS: &str = r#"{"api_version":"v1","kind":"agent_metrics_labels",
+"agent_id":"agent-1","revision":3,
+"labels":{"app":"kafka","cluster":"kafka-prod","env":"prod"},
+"sources":{"app":"inferred","cluster":"default","env":"default"},
+"updated_at":"2026-11-03T07:00:00Z"}"#;
+
+const ADMIN_AGENT_METRICS_LABELS: &str = r#"{"api_version":"v1","kind":"admin_agent_metrics_labels",
+"agent_id":"agent-1","revision":3,
+"labels":{"app":"kafka","cluster":"kafka-prod","env":"prod"},
+"sources":{"app":"manual","cluster":"default","env":"default"},
+"overrides":{"app":"kafka"},"updated_at":"2026-11-03T07:00:00Z"}"#;
+
+const SET_AGENT_METRICS_LABELS: &str = r#"{"api_version":"v1","kind":"set_agent_metrics_labels",
+"overrides":{"app":"kafka","role":null}}"#;
+
 const CREDENTIAL_RENEWAL: &str = r#"{"api_version":"v1","kind":"renew_agent_credential",
     "agent_id":"agent-1","instance_id":"inst-1","credential_request":"cr",
     "certificate_signing_request":"csr","requested_at":"2026-09-27T00:00:00Z"}"#;
@@ -203,6 +219,7 @@ fn seam_versions_are_v1() {
         ("action_result", action_result::CURRENT),
         ("facts", facts::CURRENT),
         ("discovery_policies", discovery_policies::CURRENT),
+        ("metrics_labels", metrics_labels::CURRENT),
     ] {
         assert_eq!(
             current, "v1",
@@ -219,6 +236,7 @@ fn seam_versions_are_v1() {
     assert_eq!(action_result::v1::API_VERSION, "v1");
     assert_eq!(facts::v1::API_VERSION, "v1");
     assert_eq!(discovery_policies::v1::API_VERSION, "v1");
+    assert_eq!(metrics_labels::v1::API_VERSION, "v1");
 }
 
 // ── 3. 各 seam 的字段集 + 兼容策略 ───────────────────────────────────────
@@ -501,6 +519,47 @@ fn enrollment_seam_wire_contract() {
         "certificate":"PEM","issued_at":"t"}}"#,
         &["credential_bundle"],
     );
+}
+
+#[test]
+fn metrics_labels_seam_wire_contract() {
+    round_trip::<metrics_labels::AgentMetricsLabels>(AGENT_METRICS_LABELS);
+    assert_keys::<metrics_labels::AgentMetricsLabels>(
+        AGENT_METRICS_LABELS,
+        &[
+            "agent_id",
+            "api_version",
+            "kind",
+            "labels",
+            "revision",
+            "sources",
+            "updated_at",
+        ],
+    );
+    rejects_unknown::<metrics_labels::AgentMetricsLabels>(AGENT_METRICS_LABELS);
+
+    round_trip::<metrics_labels::AgentMetricsLabelsView>(ADMIN_AGENT_METRICS_LABELS);
+    assert_keys::<metrics_labels::AgentMetricsLabelsView>(
+        ADMIN_AGENT_METRICS_LABELS,
+        &[
+            "agent_id",
+            "api_version",
+            "kind",
+            "labels",
+            "overrides",
+            "revision",
+            "sources",
+            "updated_at",
+        ],
+    );
+    rejects_unknown::<metrics_labels::AgentMetricsLabelsView>(ADMIN_AGENT_METRICS_LABELS);
+
+    round_trip::<metrics_labels::SetAgentMetricsLabelsRequest>(SET_AGENT_METRICS_LABELS);
+    assert_keys::<metrics_labels::SetAgentMetricsLabelsRequest>(
+        SET_AGENT_METRICS_LABELS,
+        &["api_version", "kind", "overrides"],
+    );
+    rejects_unknown::<metrics_labels::SetAgentMetricsLabelsRequest>(SET_AGENT_METRICS_LABELS);
 }
 
 // ── 4. 枚举的线上名 + 未知变体拒收 ───────────────────────────────────────

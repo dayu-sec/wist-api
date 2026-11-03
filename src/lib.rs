@@ -24,6 +24,7 @@ pub mod discovery_policies;
 pub mod discovery_snapshot;
 pub mod enrollment;
 pub mod facts;
+pub mod metrics_labels;
 pub mod status;
 pub mod uplink;
 pub mod work;
