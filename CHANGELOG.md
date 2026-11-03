@@ -3,6 +3,28 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.10.0] - 2026-11-03
+
+### 新增
+
+- **`metrics_labels` seam（v1）**：选择类 label（`env` / `cluster` / `app` / `role` …）的下发与
+  管理面报文。包含 agent 拉取请求/响应、管理面生效值视图、逐键手工覆盖请求。
+  为什么单开一条 seam：`AgentStatusReport` / `WorkGrant` / `AgentUplinkGrant` 两侧都是
+  `deny_unknown_fields`，给它们加字段会让旧 agentd 整份解析失败（舰队级停摆）。
+- **`metrics_labels::rules`**：键闭集、值文法、`env` 闭集、`role` / `tier` 词表、
+  `app` 依赖与数量上限的**可执行规则**。放在 seam crate 是为了让网关（写）与 agentd（收）
+  共用同一份 —— 两处各写一份必然漂移，表现为「网关放行、agent 拒收、指标静默没 label」。
+- **`status::command_kind::REFRESH`（`"refresh"`）与 `RefreshParams`**：一次刷一组知识/期望状态。
+  词表 `facts` / `policies` / `work` / `metrics-labels` / `credentials` / `uplink`；
+  其中 `uplink` **不进** `--all`（它直接决定“发不发、发到哪”）。
+
+### 升级注意
+
+- 本版只有加性变更，旧网关/旧 agentd 不受影响；新能力靠**新端点**生效，
+  旧对端不会调用，新对端遇旧对端 404 后回落本地行为。
+- `refresh` 的参数词表与 CLI 子命令同名（`metrics-labels` 用连字符）：运维在命令台账里读到的
+  值必须能直接抄回 `--only`。
+
 ## [0.9.5] - 2026-11-01
 
 ### 新增
