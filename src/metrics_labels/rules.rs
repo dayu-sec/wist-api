@@ -19,16 +19,32 @@ pub const KEYS: &[&str] = &[
 /// `env` 闭集。环境是要被聚合的轴，不允许自由发挥（`production` / `Prod` 会静默分裂）。
 pub const ENVS: &[&str] = &["prod", "staging", "dev", "test"];
 
-/// `role` 词表（§3.4）。
+/// `role` 词表（§3.4 的基础词 + §13 各系统实际用到的静态角色）。
+///
+/// 为什么是一份**基础**词表而不是每 app 自由扩展：`role` 会出现在查询与告警表达式里，
+/// 让一份策展文件引入任意词等于让 `{role=…}` 静默分裂（`broker` / `brokers` 各成一条线）。
+/// 新增角色 = 改这里 + 规范 §3.4 登记（一次代码变更），代价是一次发布，
+/// 换来的是「列出来的词一定有意义」。
 pub const ROLES: &[&str] = &[
+    "arbiter",
     "broker",
+    "config",
+    "control-plane",
     "controller",
-    "primary",
-    "replica",
     "coordinator",
     "data",
     "ingest",
+    "keeper",
+    "learner",
+    "mongos",
+    "observer",
+    "pd",
+    "primary",
     "proxy",
+    "replica",
+    "sentinel",
+    "tidb",
+    "tikv",
     "worker",
 ];
 

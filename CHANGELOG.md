@@ -3,6 +3,17 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.10.3] - 2026-11-03
+
+### 变更
+
+- **`metrics_labels::rules::ROLES` 扩到规范 §3.4 + §13 的并集**：补上
+  `arbiter` / `config` / `control-plane` / `keeper` / `learner` / `mongos` / `observer` /
+  `pd` / `sentinel` / `tidb` / `tikv`。此前只有 9 个基础词，网关按注册表写出的
+  `role=sentinel` 会被 **agent 侧整包拒收**（表现为指标静默没有选择类 label）。
+- 词表仍是**闭集**：每 app 自由扩展角色词会让 `{role=...}` 静默分裂，
+  新增角色继续走「改这里 + 规范登记」。
+
 ## [0.10.2] - 2026-11-03
 
 ### 新增
