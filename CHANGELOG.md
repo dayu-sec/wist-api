@@ -3,6 +3,18 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.11.0] - 2026-11-10
+
+### 变更（依赖）
+
+- 对齐 `wist-contracts 0.11.0`（采集状态改多字段正交模型）。本 crate 没有任何报文
+  结构改动：采集结果仍随 `AgentLocalStandingWork.collection` 透传，字段变化由 contracts 拥有。
+
+### 为什么升 minor
+
+- 本 crate 的公开 API 直接重导出 contracts 类型，下游能看到 contracts 的结构变化
+  （`AgentLocalCollection` 新增 `prerequisites` / `result` / `reasons`）。
+
 ## [0.10.4] - 2026-11-03
 
 ### 新增
