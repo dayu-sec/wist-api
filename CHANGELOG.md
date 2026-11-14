@@ -1,7 +1,28 @@
 # 更新日志
 
-本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
+本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
+
+## [0.12.0] - 2026-11-14
+
+### 新增（`harvest_work`：云采集器的工作授权报文）
+
+与 `agent` 的 work seam 同形，但**不复用**那条 seam（worker 不是被纳管的机器）：
+
+- 身份：`HarvestEnrollmentRequest` / `HarvestEnrollmentEnvelope` / `HarvestCertificateRenewal`
+  （带 `new()` 构造器）/ `HarvestCertificateRenewed`；主体由网关按 `worker_id` 填，CSR 里的
+  subject/SAN 一律忽略。
+- 工作授权：`PollHarvestWork` → `HarvestWorkGrant`（`standing` + `one_shot` + `sequence`）、
+  `AckHarvestWork`、`ReportHarvestResult` / `HarvestResultAccepted`。
+- spec：`HarvestSpec`（`credential_ref` 只是引用名，真值不进网关）、`HarvestCadence`
+  （`daily` / `interval` / `on_demand`，**普通结构 + `mode` 字段**：serde 的 `deny_unknown_fields`
+  对 tagged enum 不生效）、`OneShotHarvestWork` / `OneShotHarvestSpec`。
+
+全部 `#[serde(deny_unknown_fields)]`；按 `wist-contracts` 的并存约定，只增不删，非加性变更新开 v2。
+
+### 为什么升 minor
+
+新增公开模块 `harvest_work`（下游能看到全新的报文面）。
 
 ## [0.11.0] - 2026-11-10
 
