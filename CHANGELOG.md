@@ -3,6 +3,14 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.13.0] - 2026-11-21
+
+### 变更（依赖）
+
+- 对齐 `wist-contracts 0.12.0`（新增采集来源 `KeyProcessMetrics`）。本仓报文定义无改动；
+  报文里直接引用 contracts 的领域类型，所以随 contracts 升 minor。
+- 必须与 contracts 0.12 **一起用**，否则会同时链入两份 contracts。
+
 ## [0.12.0] - 2026-11-14
 
 ### 新增（`harvest_work`：云采集器的工作授权报文）
