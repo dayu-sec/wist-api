@@ -6,7 +6,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use wist_contracts::capability_report::{InvestigationCapabilities, LogsCapabilities};
+use wist_contracts::capability_report::{
+    ExecCapabilities, InvestigationCapabilities, LogsCapabilities,
+};
 
 use super::{AgentLocalWork, AgentUplinkState, HostProfile};
 
@@ -126,6 +128,11 @@ pub struct AgentStatusReport {
     /// （目前没有），宁可让菜单置灰，也不发一条注定失败的调查。
     #[serde(default)]
     pub investigation_capabilities: Option<InvestigationCapabilities>,
+    /// 本机**执行能力**：注册表里真实存在的 opcode（见 agentd `exec::opcode::capabilities()`）。
+    ///
+    /// `None` = 旧版本 agentd 没报：网关按「未知」处理，**不发**需要这些 opcode 的计划。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exec_capabilities: Option<ExecCapabilities>,
     /// 本机对网关下发的**一次性命令**的处理结果（见 [`AgentCommandAck`]）。
     ///
     /// 空 = 本次没有要确认的命令，字段不出现。**加性字段**：本结构是
@@ -232,6 +239,12 @@ pub mod command_kind {
     ///
     /// 只覆盖可重复拉取的控制面数据；`uplink` 只能显式请求（直接决定“发不发、发到哪”）。
     pub const REFRESH: &str = "refresh";
+    /// 执行一条 `ActionPlan`（见 wist-agentd `exec::plan_review` / `wist-exec`）。
+    ///
+    /// `params` 是 `wist_contracts::action_plan::ActionPlan` 的 JSON。
+    /// 与 `investigate` 一样是**一次性动作**；结果与证据落在 agentd 本地，
+    /// 命令 ack 只回「已入队 / 被拒」与原因码。
+    pub const ACTION_PLAN: &str = "action_plan";
 }
 
 /// `refresh` 命令的可刷新来源词表（[`RefreshParams::what`] 的取值）。

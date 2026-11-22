@@ -3,6 +3,28 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.13.2] - 2026-11-22
+
+### 变更（依赖）
+
+- 对齐 `wist-contracts 0.14.0`。本仓代码无改动；对外暴露 contracts 类型，
+  必须与 contracts 0.14 一起用。
+
+## [0.13.1] - 2026-11-22
+
+### 新增
+
+- `AgentStatusReport.exec_capabilities: Option<ExecCapabilities>`（加性、`serde(default)`）：
+  agent 上报本机**真实登记的 opcode**；`None` = 旧版本，网关按“未知”处理。
+- `command_kind::ACTION_PLAN = "action_plan"`：`params` 是完整的 `ActionPlan` JSON；
+  ack 只回「已入队 / 被拒」（原因码写在 `detail`）。
+
+### 变更（依赖）
+
+- 对齐 `wist-contracts 0.13.0`（新增 `ActionPlanStep.args`）。本仓报文定义无改动；
+  `ReportActionResult.result` 直接嵌的是 contracts 的 `ActionResult`，必须与 contracts 0.13
+  **一起用**，否则树里会同时出现两份 `ActionPlan`。
+
 ## [0.13.0] - 2026-11-21
 
 ### 变更（依赖）
