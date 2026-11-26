@@ -3,6 +3,13 @@
 本文件记录 `wist-api` 的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.14.0] - 2026-11-26
+
+### 变更（依赖）
+
+- 对齐 `wist-contracts 0.15.0`（新增采集来源 `HostFlow`：主机流记录）。本仓代码无改动；
+  对外暴露 contracts 类型，必须与 contracts 0.15 一起用。
+
 ## [0.13.2] - 2026-11-22
 
 ### 变更（依赖）
