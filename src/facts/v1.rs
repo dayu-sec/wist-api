@@ -245,4 +245,32 @@ mod tests {
         let back: ReportAgentFactSummary = serde_json::from_str(&json).expect("decode");
         assert_eq!(back, with_display);
     }
+
+    /// 幂等命中时网关回带已存的建议；没有建议时字段缺席（`Option` 默认 `None`），
+    /// 不能因此把整份回执判成非法。
+    #[test]
+    fn fact_summary_accepted_tolerates_an_absent_suggestion_id() {
+        let accepted = FactSummaryAccepted {
+            report_id: "rep-1".to_string(),
+            agent_id: "agent-1".to_string(),
+            content_digest: "fact-v2:sha256:abc".to_string(),
+            ack_status: FactSummaryAckStatus::Duplicate,
+            suggestion_id: Some("sug-1".to_string()),
+            received_at: "2026-09-27T00:00:01Z".to_string(),
+        };
+
+        let value = serde_json::to_value(&accepted).expect("encode");
+        assert_eq!(
+            serde_json::from_value::<FactSummaryAccepted>(value.clone()).expect("decode"),
+            accepted
+        );
+
+        let mut absent = value;
+        absent
+            .as_object_mut()
+            .expect("object")
+            .remove("suggestion_id");
+        let back: FactSummaryAccepted = serde_json::from_value(absent).expect("decode");
+        assert_eq!(back.suggestion_id, None);
+    }
 }

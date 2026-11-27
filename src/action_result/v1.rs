@@ -101,14 +101,13 @@ mod tests {
         }
     }
 
-    #[test]
-    fn report_action_result_new_sets_kind_and_leaves_dispatch_absent() {
+    fn report() -> ReportActionResult {
         let result = ActionResult::new(
             "act-1".to_string(),
             "exec-1".to_string(),
             FinalStatus::Succeeded,
         );
-        let report = ReportActionResult::new(
+        ReportActionResult::new(
             "rep-1".to_string(),
             "act-1".to_string(),
             1,
@@ -120,7 +119,12 @@ mod tests {
             attestation(),
             "2026-09-27T00:00:02Z".to_string(),
             result,
-        );
+        )
+    }
+
+    #[test]
+    fn report_action_result_new_sets_kind_and_leaves_dispatch_absent() {
+        let report = report();
         assert_eq!(report.api_version, API_VERSION_V1);
         assert_eq!(report.kind, REPORT_ACTION_RESULT_KIND);
         assert_eq!(report.dispatch_id, None);
@@ -128,5 +132,49 @@ mod tests {
         let json = serde_json::to_string(&report).expect("encode");
         let back: ReportActionResult = serde_json::from_str(&json).expect("decode");
         assert_eq!(back, report);
+    }
+
+    /// 旧的发送方可能整份没有 `dispatch_id`（它只在随计划派发时才有）：
+    /// 缺席 = `None`，而不是解析失败。这条与 `deny_unknown_fields` 是**互补**的两面 ——
+    /// “少一个可选键”要能吃，“多一个未知键”要炸。
+    #[test]
+    fn a_report_without_a_dispatch_id_still_decodes() {
+        let mut value = serde_json::to_value(report()).expect("encode");
+        value.as_object_mut().expect("object").remove("dispatch_id");
+        let back: ReportActionResult = serde_json::from_value(value).expect("decode");
+        assert_eq!(back.dispatch_id, None);
+
+        let mut with_dispatch = serde_json::to_value(report()).expect("encode");
+        with_dispatch
+            .as_object_mut()
+            .expect("object")
+            .insert("dispatch_id".to_string(), "disp-1".into());
+        let back: ReportActionResult = serde_json::from_value(with_dispatch).expect("decode");
+        assert_eq!(back.dispatch_id.as_deref(), Some("disp-1"));
+
+        // 未知键仍然要炸（两侧各自演进时不允许静默吃下）。
+        let mut drifted = serde_json::to_value(report()).expect("encode");
+        drifted
+            .as_object_mut()
+            .expect("object")
+            .insert("extra".to_string(), 1.into());
+        assert!(serde_json::from_value::<ReportActionResult>(drifted).is_err());
+    }
+
+    #[test]
+    fn the_ack_round_trips_and_rejects_drift() {
+        let ack = ActionResultAck {
+            report_id: "rep-1".to_string(),
+            agent_id: "agent-1".to_string(),
+            acknowledged_at: "2026-09-27T00:00:03Z".to_string(),
+        };
+        let json = serde_json::to_string(&ack).expect("encode");
+        assert_eq!(
+            serde_json::from_str::<ActionResultAck>(&json).expect("decode"),
+            ack
+        );
+
+        let drifted = json.replacen('{', "{\"extra\":1,", 1);
+        assert!(serde_json::from_str::<ActionResultAck>(&drifted).is_err());
     }
 }

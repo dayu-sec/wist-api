@@ -435,6 +435,90 @@ mod tests {
         assert!(serde_json::from_str::<AgentStatusReport>(drifted).is_err());
     }
 
+    /// `exec_capabilities` / `investigation_capabilities` 与 `logs_capabilities` 同一条约定：
+    /// 可选，缺席 = 旧 agent（网关按“未知”处理），出现则如实解码；字段漂移要显形。
+    #[test]
+    fn exec_and_investigation_capabilities_are_optional_and_round_trip() {
+        let legacy = r#"{"agent_id":"a","instance_id":"i","version":"0.9.0"}"#;
+        let report: AgentStatusReport = serde_json::from_str(legacy).expect("decode");
+        assert!(report.exec_capabilities.is_none());
+        assert!(report.investigation_capabilities.is_none());
+
+        let json = r#"{"agent_id":"a","instance_id":"i","version":"0.13.1",
+            "exec_capabilities":{"opcodes":["shell","process.list"],
+            "execution_profiles":["default"]},
+            "investigation_capabilities":{"surfaces":["disk","load"],"privileged":true}}"#;
+        let report: AgentStatusReport = serde_json::from_str(json).expect("decode");
+        let exec = report
+            .exec_capabilities
+            .as_ref()
+            .expect("exec_capabilities");
+        assert_eq!(exec.opcodes, vec!["shell", "process.list"]);
+        assert_eq!(exec.execution_profiles, vec!["default"]);
+        let investigation = report
+            .investigation_capabilities
+            .as_ref()
+            .expect("investigation_capabilities");
+        assert_eq!(investigation.surfaces, vec!["disk", "load"]);
+        assert!(investigation.privileged);
+
+        // 两段可选能力都要能原样写回去再读回来。
+        let encoded = serde_json::to_string(&report).expect("encode");
+        let back: AgentStatusReport = serde_json::from_str(&encoded).expect("decode");
+        assert_eq!(back, report);
+
+        // 字段漂移显形（与同族结构一致）。
+        let drifted = r#"{"agent_id":"a","instance_id":"i","version":"v",
+            "exec_capabilities":{"opcodes":[],"nope":1}}"#;
+        assert!(serde_json::from_str::<AgentStatusReport>(drifted).is_err());
+    }
+
+    /// 命令 kind 与 `refresh` 的目标都是**跨版本协议词**：网关按字面量分支，
+    /// 旧 agent 不认识就回 `unsupported`。改值只能靠这类断言发现。
+    #[test]
+    fn command_kinds_and_refresh_targets_keep_their_wire_names() {
+        use super::{command_kind, refresh_what};
+
+        assert_eq!(command_kind::REFRESH_FACTS, "refresh_facts");
+        assert_eq!(command_kind::INVESTIGATE, "investigate");
+        assert_eq!(command_kind::REFRESH, "refresh");
+        assert_eq!(command_kind::ACTION_PLAN, "action_plan");
+
+        assert_eq!(refresh_what::FACTS, "facts");
+        assert_eq!(refresh_what::POLICIES, "policies");
+        assert_eq!(refresh_what::WORK, "work");
+        assert_eq!(refresh_what::METRICS_LABELS, "metrics-labels");
+        assert_eq!(refresh_what::CREDENTIALS, "credentials");
+        assert_eq!(refresh_what::UPLINK, "uplink");
+        assert_eq!(
+            refresh_what::ALL,
+            [
+                "facts",
+                "policies",
+                "work",
+                "metrics-labels",
+                "credentials",
+                "uplink"
+            ]
+            .as_slice()
+        );
+        // 词表内去重：同一个语义写两个串是下游最难查的那类 bug。
+        let unique: std::collections::BTreeSet<&&str> = refresh_what::ALL.iter().collect();
+        assert_eq!(unique.len(), refresh_what::ALL.len());
+    }
+
+    /// 三个身份字段是**必需**的（其余全部 `#[serde(default)]`）：网关落库与路由都无条件读它们。
+    #[test]
+    fn the_three_identity_fields_are_required() {
+        for missing in ["agent_id", "instance_id", "version"] {
+            let mut value = serde_json::json!({"agent_id":"a","instance_id":"i","version":"v"});
+            value.as_object_mut().expect("object").remove(missing);
+            let err = serde_json::from_value::<AgentStatusReport>(value)
+                .expect_err(&format!("缺 {missing} 必须拒收"));
+            assert!(err.to_string().contains(missing), "{missing}: {err}");
+        }
+    }
+
     /// 回执里可以带一批通用命令；旧网关不带这个字段时仍然是合法回执。
     #[test]
     fn a_status_ack_carries_optional_commands() {

@@ -184,4 +184,68 @@ mod tests {
                       "granted_at":"t","extra":1}"#;
         assert!(serde_json::from_str::<WorkGrant>(json).is_err());
     }
+
+    /// 三个 agent → 网关的 envelope 也要能原样往返，并对字段漂移响亮失败。
+    /// 它们分别对应拉取 / 确认 / 结果上报；后者丢了意味着「改机器状态的活做完了，
+    /// 控制面永远不知道成没成」。
+    #[test]
+    fn work_envelopes_round_trip_and_reject_drift() {
+        let poll = PollWork {
+            api_version: API_VERSION.to_string(),
+            kind: POLL_WORK_KIND.to_string(),
+            agent_id: "agent-1".to_string(),
+            instance_id: "inst-1".to_string(),
+            last_seen_sequence: 7,
+            wait_ms: 0,
+            requested_at: "2026-09-23T00:00:00Z".to_string(),
+        };
+        let json = serde_json::to_string(&poll).expect("encode");
+        assert_eq!(
+            serde_json::from_str::<PollWork>(&json).expect("decode"),
+            poll
+        );
+        let drifted = json.replacen('{', "{\"extra\":1,", 1);
+        assert!(serde_json::from_str::<PollWork>(&drifted).is_err());
+
+        let ack = AckWork {
+            api_version: API_VERSION.to_string(),
+            kind: ACK_WORK_KIND.to_string(),
+            agent_id: "agent-1".to_string(),
+            instance_id: "inst-1".to_string(),
+            work_id: "work-a".to_string(),
+            plan_version: 2,
+            acknowledged_at: "2026-09-23T00:00:01Z".to_string(),
+        };
+        let json = serde_json::to_string(&ack).expect("encode");
+        assert_eq!(serde_json::from_str::<AckWork>(&json).expect("decode"), ack);
+        let drifted = json.replacen('{', "{\"extra\":1,", 1);
+        assert!(serde_json::from_str::<AckWork>(&drifted).is_err());
+
+        let report = ReportWorkResult {
+            api_version: API_VERSION.to_string(),
+            kind: REPORT_WORK_RESULT_KIND.to_string(),
+            agent_id: "agent-1".to_string(),
+            instance_id: "inst-1".to_string(),
+            work_id: "work-1".to_string(),
+            status: "succeeded".to_string(),
+            detail: "done".to_string(),
+            reported_at: "2026-09-23T00:00:02Z".to_string(),
+        };
+        let json = serde_json::to_string(&report).expect("encode");
+        assert_eq!(
+            serde_json::from_str::<ReportWorkResult>(&json).expect("decode"),
+            report
+        );
+        let drifted = json.replacen('{', "{\"extra\":1,", 1);
+        assert!(serde_json::from_str::<ReportWorkResult>(&drifted).is_err());
+
+        // `detail` 是 `#[serde(default)]`：旧 agent 不带它不能算非法。
+        let mut without_detail = serde_json::to_value(&report).expect("encode");
+        without_detail
+            .as_object_mut()
+            .expect("object")
+            .remove("detail");
+        let back: ReportWorkResult = serde_json::from_value(without_detail).expect("decode");
+        assert_eq!(back.detail, "");
+    }
 }
